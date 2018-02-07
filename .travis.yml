@@ -1,0 +1,13 @@
+sudo: false
+language: python
+python:
+  - "3.4"
+  - "3.6"
+install:
+  - pip install -U pip
+  - "pip install -e .[dev]"
+script:
+  - flake8 hai
+  - py.test -vvv --cov .
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
