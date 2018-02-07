@@ -4,6 +4,7 @@
 .coverage
 .eggs
 .idea
+.pytest_cache
 .tox
 .venv
 build/
