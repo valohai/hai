@@ -5,6 +5,8 @@ dev_dependencies = [
     'isort',
     'pydocstyle',
     'pytest-cov',
+    'moto',
+    'boto3',
 ]
 
 if __name__ == '__main__':
