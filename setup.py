@@ -13,7 +13,7 @@ if __name__ == '__main__':
     setuptools.setup(
         name='hai',
         description='Toolbelt library',
-        version='0.0.5',
+        version='0.0.6',
         url='https://github.com/valohai/hai',
         author='Valohai',
         author_email='hait@valohai.com',
