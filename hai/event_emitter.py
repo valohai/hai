@@ -22,8 +22,7 @@ class EventEmitter:
             raise ValueError('event type {} is not known'.format(event))
         emitter_dict = _get_event_emitter_dict(self)
         handlers = (
-            emitter_dict.get(event, set()) |
-            emitter_dict.get('*', set())
+            emitter_dict.get(event, set()) | emitter_dict.get('*', set())
         )
         args = (args or {})
         args.setdefault('sender', self)
