@@ -1,4 +1,11 @@
+import ast
+import os
+import re
 import setuptools
+
+with open(os.path.join(os.path.dirname(__file__), 'hai', '__init__.py')) as infp:
+    version = ast.literal_eval(re.search('__version__ = (.+?)$', infp.read(), re.M).group(1))
+
 
 dev_dependencies = [
     'flake8',
@@ -13,7 +20,7 @@ if __name__ == '__main__':
     setuptools.setup(
         name='hai',
         description='Toolbelt library',
-        version='0.0.6',
+        version=version,
         url='https://github.com/valohai/hai',
         author='Valohai',
         author_email='hait@valohai.com',
