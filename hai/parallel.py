@@ -1,20 +1,5 @@
-from threading import Thread
-
-
-class ParallelRunThread(Thread):
-    def run(self):
-        self.exception = False
-        self.return_value = None
-        self.finished = False
-        try:
-            self.return_value = self._target(*self._args, **self._kwargs)
-        except Exception as exc:
-            self.exception = exc
-        finally:
-            self.finished = True
-            # Avoid a refcycle if the thread is running a function with
-            # an argument that has a member that points to the thread.
-            del self._target, self._args, self._kwargs
+import os
+from multiprocessing.pool import ThreadPool
 
 
 class ParallelException(Exception):
@@ -27,10 +12,25 @@ class ParallelRun:
 
     Due to the GIL, this is mainly useful for IO-bound threads, such as
     downloading stuff from the Internet, or writing big buffers of data.
+
+    It's recommended to use this in a `with` block, to ensure the thread pool
+    gets properly shut down.
     """
 
-    def __init__(self):
-        self.threads = []
+    def __init__(self, parallelism=None):
+        self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
+        self.tasks = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.pool.terminate()
+
+    def __del__(self):  # opportunistic cleanup
+        if self.pool:
+            self.pool.terminate()
+            self.pool = None
 
     def add_task(self, task, name=None, args=(), kwargs=None):
         """
@@ -48,15 +48,10 @@ class ParallelRun:
         """
         if not name:
             name = (getattr(task, '__name__' or None) or str(task))
-        thread = ParallelRunThread(
-            name=name,
-            target=task,
-            args=args,
-            kwargs=kwargs,
-            daemon=True,
-        )
-        thread.start()
-        self.threads.append(thread)
+        task = self.pool.apply_async(task, args=args, kwds=(kwargs or {}))
+        task.name = str(name)
+        self.tasks.append(task)
+        return task
 
     def wait(self, fail_fast=True, interval=0.1):
         """
@@ -78,14 +73,14 @@ class ParallelRun:
         """
         while True:
             all_dead = True
-            for thread in self.threads:
-                if fail_fast and thread.exception:
-                    message = '[%s] %s' % (thread.name, str(thread.exception))
-                    raise ParallelException(message) from thread.exception
-                if thread.finished:
+            for task in self.tasks:
+                if not task.ready():
+                    all_dead = False
                     continue
-                all_dead = False
-                thread.join(interval)
+                if fail_fast and not task.successful():
+                    message = '[%s] %s' % (task.name, str(task._value))
+                    raise ParallelException(message) from task._value
+                task.wait(interval)
             if all_dead:
                 break
 
@@ -106,7 +101,7 @@ class ParallelRun:
         Get the return values (if resolved yet) of the tasks.
         :return: dictionary of name to return value.
         """
-        return {t.name: t.return_value for t in self.threads if t.finished}
+        return {t.name: t._value for t in self.tasks if t.ready()}
 
     @property
     def exceptions(self):
@@ -115,7 +110,7 @@ class ParallelRun:
         :return: dictionary of name to exception.
         """
         return {
-            t.name: t.exception
-            for t in self.threads
-            if t.finished and t.exception
+            t.name: t._value
+            for t in self.tasks
+            if t.ready() and not t._success
         }
