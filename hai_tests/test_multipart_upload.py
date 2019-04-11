@@ -65,8 +65,10 @@ def test_invalid_file_size(tmpdir):
 def test_error_handling():
     s3 = boto3.client('s3', region_name='us-east-1')
     s3.create_bucket(Bucket='foo')
+
     def upload_fn(**args):
         raise IOError('the internet is dead')
+
     s3.upload_part = upload_fn
     mpu = MultipartUploader(s3)
     with pytest.raises(IOError):
