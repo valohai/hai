@@ -1,4 +1,5 @@
 sudo: false
+dist: xenial
 language: python
 python:
   - "3.4"
@@ -8,6 +9,9 @@ install:
   - "pip install -e .[dev]"
 script:
   - flake8 hai
+  - export BOTO_CONFIG=/dev/null
+  - export AWS_SECRET_ACCESS_KEY=foobar_secret
+  - export AWS_ACCESS_KEY_ID=foobar_key
   - py.test -vvv --cov .
 after_success:
   - bash <(curl -s https://codecov.io/bash)
