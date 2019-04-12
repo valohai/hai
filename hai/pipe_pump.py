@@ -22,7 +22,8 @@ class BasePipePump:
         """
         key = str(key)
         self.buffers[key] = b''
-        self.selector.register(fileobj, selectors.EVENT_READ, data=key)
+        if fileobj:
+            self.selector.register(fileobj, selectors.EVENT_READ, data=key)
 
     def pump(self, timeout=0):
         """
