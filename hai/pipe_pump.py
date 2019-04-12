@@ -1,3 +1,4 @@
+import re
 import selectors
 import threading
 
@@ -207,4 +208,62 @@ class ChunkPipePump(BasePipePump):
         for key, buffer in self.buffers.items():
             if buffer:  # pragma: no branch
                 self._handle_chunk(key, buffer)
+        self.buffers.clear()
+
+
+class CRLFPipePump(BasePipePump):
+    """
+    A pipe pump that knows how to handle carriage returns like they are handled on terminals.
+
+    Unlike LinePipePump, this does not buffer any history in its own state, only the last line.
+    """
+
+    CRLF_SEP_RE = re.compile(br'^(.*?)([\r\n])')
+
+    def __init__(self):
+        super().__init__()
+        self.line_state = {}
+        self._handlers = []
+
+    def add_handler(self, handler):
+        """
+        :param handler: Callable to call when a line is received; receives:
+
+                        * the queue key
+                        * the last line bytes, if any
+                        * the new line bytes, if any
+                        * and a flag describing
+                          whether the new bytes should replace the latest line,
+                          or add a new one to the buffer.
+
+        :type handler: Callable[Tuple[str, Optional[bytes], bytes, bool], None]
+        """
+        assert callable(handler)
+        self._handlers.append(handler)
+
+    def _process_buffer(self, key, buffer):
+        while True:
+            m = self.CRLF_SEP_RE.match(buffer)
+            if not m:
+                break
+            self._process_line(key, m.group(1), is_replace=(m.group(2) == b'\r'))
+            buffer = buffer[m.end():]
+        return buffer
+
+    def _process_line(self, key, new_content, is_replace):
+        if key in self.line_state:
+            old_content, last_was_replace = self.line_state[key]
+        else:
+            old_content, last_was_replace = (None, False)
+        self.line_state[key] = (new_content, is_replace)
+
+        for handler in self._handlers:  # pragma: no branch
+            handler(key, old_content, new_content, last_was_replace)
+
+    def close(self):
+        self.pump()  # One more pump before closing!
+        super().close()
+        for key, buffer in self.buffers.items():
+            if buffer:  # pragma: no branch
+                self._process_line(key, buffer, False)
         self.buffers.clear()
