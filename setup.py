@@ -6,7 +6,6 @@ import setuptools
 with open(os.path.join(os.path.dirname(__file__), 'hai', '__init__.py')) as infp:
     version = ast.literal_eval(re.search('__version__ = (.+?)$', infp.read(), re.M).group(1))
 
-
 dev_dependencies = [
     'flake8',
     'isort',
@@ -32,4 +31,9 @@ if __name__ == '__main__':
         extras_require={'dev': dev_dependencies},
         packages=setuptools.find_packages('.', exclude=('hai_tests', 'hai_tests.*',)),
         include_package_data=True,
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: MIT License",
+            "Operating System :: OS Independent",
+        ],
     )
