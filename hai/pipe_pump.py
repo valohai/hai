@@ -38,11 +38,11 @@ class BasePipePump:
                 return
             for (key, event) in self.selector.select(timeout=timeout):
                 data = key.fileobj.read(self.read_size)
-                self._buffer(key.data, data)
+                self.feed(key.data, data)
 
-    def _buffer(self, key, data):
+    def feed(self, key, data):
         """
-        Internal; add data to the keyed buffer.
+        Add data to the keyed buffer.
 
         This calls `_process_buffer` to process the newly augmented buffer,
         which may call subclass callbacks.
