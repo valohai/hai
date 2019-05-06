@@ -1,4 +1,6 @@
 import os
+import time
+from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
 
 
@@ -53,7 +55,7 @@ class ParallelRun:
         self.tasks.append(task)
         return task
 
-    def wait(self, fail_fast=True, interval=0.1):
+    def wait(self, fail_fast=True, interval=0.5):
         """
         Wait until all of the current tasks have finished.
 
@@ -65,24 +67,58 @@ class ParallelRun:
                           soon as a task crashes.
         :type fail_fast: bool
 
-        :param interval: `.join()` check interval.
+        :param interval: Loop sleep interval.
         :type interval: float
 
         :raises ParallelException: If any task crashes (only when
                                    fail_fast is true).
         """
+
+        # Keep track of tasks we've certifiably seen completed,
+        # to avoid having to acquire a lock for the `ready` event
+        # when we don't need to.
+
+        completed_tasks = WeakSet()
+
         while True:
-            all_dead = True
-            for task in self.tasks:
-                if not task.ready():
-                    all_dead = False
+            # Keep track of whether there were any incomplete tasks this loop.
+            had_any_incomplete_task = False
+
+            for task in self.tasks:  # :type: ApplyResult
+                # If we've already seen this task completed, don't bother.
+                if task in completed_tasks:
                     continue
-                if fail_fast and not task.successful():
+
+                # Poll the task to see if it's ready.
+                is_ready = task.ready()
+
+                if not is_ready:
+                    # If it's not yet ready, we need to loop once more,
+                    # and we can't check for success now.
+                    had_any_incomplete_task = True
+                    continue
+
+                # Mark this task as completed (for good or for worse),
+                # so we don't need to re-check it.
+                completed_tasks.add(task)
+
+                # Raise an exception if we're failing fast.
+                # We're accessing `_success` directly instead of using
+                # `.successful()` to avoid re-locking (as `.ready()` would).
+                # Similarly, we access `._value` in order to avoid actually
+                # raising the exception directly.
+                if fail_fast and not task._success:
                     message = '[%s] %s' % (task.name, str(task._value))
                     raise ParallelException(message) from task._value
-                task.wait(interval)
-            if all_dead:
+
+            # If there were no incomplete tasks left last iteration, quit.
+            if not had_any_incomplete_task:
                 break
+
+            # Otherwise wait for a bit before trying again.
+            time.sleep(interval)
+
+        return list(completed_tasks)  # We can just as well return the completed tasks.
 
     def maybe_raise(self):
         """
