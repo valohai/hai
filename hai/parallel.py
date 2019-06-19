@@ -22,6 +22,7 @@ class ParallelRun:
     def __init__(self, parallelism=None):
         self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
         self.tasks = []
+        self.completed_tasks = None
 
     def __enter__(self):
         return self
@@ -55,7 +56,7 @@ class ParallelRun:
         self.tasks.append(task)
         return task
 
-    def wait(self, fail_fast=True, interval=0.5):
+    def wait(self, fail_fast=True, interval=0.5, callback=None):
         """
         Wait until all of the current tasks have finished.
 
@@ -70,6 +71,11 @@ class ParallelRun:
         :param interval: Loop sleep interval.
         :type interval: float
 
+        :param callback: A function that is called on each wait loop iteration.
+                         Receives one parameter, the parallel run
+                         instance itself.
+        :type callback: function
+
         :raises ParallelException: If any task crashes (only when
                                    fail_fast is true).
         """
@@ -78,7 +84,7 @@ class ParallelRun:
         # to avoid having to acquire a lock for the `ready` event
         # when we don't need to.
 
-        completed_tasks = WeakSet()
+        self.completed_tasks = WeakSet()
 
         while True:
             # Keep track of whether there were any incomplete tasks this loop.
@@ -86,7 +92,7 @@ class ParallelRun:
 
             for task in self.tasks:  # :type: ApplyResult
                 # If we've already seen this task completed, don't bother.
-                if task in completed_tasks:
+                if task in self.completed_tasks:
                     continue
 
                 # Poll the task to see if it's ready.
@@ -100,7 +106,7 @@ class ParallelRun:
 
                 # Mark this task as completed (for good or for worse),
                 # so we don't need to re-check it.
-                completed_tasks.add(task)
+                self.completed_tasks.add(task)
 
                 # Raise an exception if we're failing fast.
                 # We're accessing `_success` directly instead of using
@@ -111,6 +117,9 @@ class ParallelRun:
                     message = '[%s] %s' % (task.name, str(task._value))
                     raise ParallelException(message) from task._value
 
+            if callback:
+                callback(self)
+
             # If there were no incomplete tasks left last iteration, quit.
             if not had_any_incomplete_task:
                 break
@@ -118,7 +127,7 @@ class ParallelRun:
             # Otherwise wait for a bit before trying again.
             time.sleep(interval)
 
-        return list(completed_tasks)  # We can just as well return the completed tasks.
+        return list(self.completed_tasks)  # We can just as well return the completed tasks.
 
     def maybe_raise(self):
         """
