@@ -1,3 +1,4 @@
+from mock import MagicMock
 import time
 
 import pytest
@@ -40,6 +41,16 @@ def test_parallel_wait_without_fail_fast():
         assert parallel.return_values['true'] is True
         with pytest.raises(ParallelException):
             parallel.maybe_raise()
+
+
+@pytest.mark.parametrize('is_empty_run', (False, True))
+def test_parallel_callback_is_called_at_least_once_on_wait(is_empty_run):
+    with ParallelRun() as parallel:
+        stub = MagicMock()
+        if not is_empty_run:
+            parallel.add_task(return_true, name='true')
+        parallel.wait(callback=stub)
+        stub.assert_called_with(parallel)
 
 
 @pytest.mark.parametrize('fail', (False, True))
