@@ -6,9 +6,20 @@ from hai.boto3_multipart_upload import MultipartUploader, S3_MINIMUM_MULTIPART_F
 from moto import mock_s3
 
 
+class ChunkCallbackMultipartUploader(MultipartUploader):
+    chunk_sizes = None
+
+    def read_chunk(self, fp, size):
+        chunk = fp.read(size)
+        if self.chunk_sizes is not None:
+            self.chunk_sizes.append(len(chunk))
+        return chunk
+
+
 @mock_s3
 @pytest.mark.parametrize('file_type', ('real', 'imaginary'))
-def test_multipart_upload(tmpdir, file_type):
+@pytest.mark.parametrize('mpu_class', (MultipartUploader, ChunkCallbackMultipartUploader), ids=('no-func', 'chunk-func'))
+def test_multipart_upload(tmpdir, file_type, mpu_class):
     if file_type == 'real':
         temp_path = tmpdir.join('temp.dat')
         with temp_path.open('wb') as outf:
@@ -27,7 +38,7 @@ def test_multipart_upload(tmpdir, file_type):
     bucket_name = 'mybucket'
     key_name = 'hello/world'
     s3.create_bucket(Bucket=bucket_name)
-    mpu = MultipartUploader(s3)
+    mpu = mpu_class(s3)
     events = []
 
     def event_handler(**args):
@@ -35,12 +46,19 @@ def test_multipart_upload(tmpdir, file_type):
 
     mpu.on('*', event_handler)
 
+
+    if mpu_class is ChunkCallbackMultipartUploader:
+        mpu.chunk_sizes = []
+
     with file:
         mpu.upload_file(bucket_name, key_name, file)
 
     obj = s3.get_object(Bucket=bucket_name, Key=key_name)
     assert obj['ContentLength'] == expected_size
     assert any(e['event'] == 'progress' for e in events)
+
+    if mpu_class is ChunkCallbackMultipartUploader:
+        assert sum(mpu.chunk_sizes) == expected_size
 
 
 @mock_s3

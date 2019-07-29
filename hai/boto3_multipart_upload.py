@@ -105,6 +105,14 @@ class MultipartUploader(EventEmitter):
             MultipartUpload={'Parts': part_infos},
         )
 
+    def read_chunk(self, fp, size):
+        """
+        Read a chunk of up to size `size` from the filelike object `fp`.
+
+        Useful for overriding, e.g. computing checksums over the chunks.
+        """
+        return fp.read(size)
+
     def upload_file(self, bucket, key, fp, chunk_size=None, create_params=None):
         """
         Upload the given file in chunks.
@@ -154,7 +162,7 @@ class MultipartUploader(EventEmitter):
 
         def chunk_generator():
             while True:
-                chunk = fp.read(chunk_size)
+                chunk = self.read_chunk(fp, chunk_size)
                 if not chunk:
                     break
                 yield chunk
