@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from hai.parallel import ParallelException, ParallelRun
+from hai.parallel import ParallelException, ParallelRun, TasksFailed, TaskFailed
 
 
 def agh():
@@ -18,10 +18,11 @@ def return_true():
 def test_parallel_crash():
     with ParallelRun() as parallel:
         parallel.add_task(return_true)
-        parallel.add_task(agh)
-        with pytest.raises(ParallelException) as ei:
-            parallel.wait()
-        assert str(ei.value.__cause__) == 'agh!'
+        failing_task = parallel.add_task(agh)
+        with pytest.raises(TaskFailed) as ei:
+            parallel.wait(fail_fast=True)
+        assert str(ei.value.__cause__) == str(ei.value.exception) == 'agh!'
+        assert ei.value.task == failing_task
 
 
 def test_parallel_retval():
@@ -39,8 +40,11 @@ def test_parallel_wait_without_fail_fast():
         parallel.wait(fail_fast=False)
         assert parallel.exceptions['agh'].args[0] == 'agh!'
         assert parallel.return_values['true'] is True
-        with pytest.raises(ParallelException):
+        with pytest.raises(TasksFailed) as ei:
             parallel.maybe_raise()
+        assert len(ei.value.exception_map) == 1
+        assert isinstance(ei.value.exception_map['agh'], RuntimeError)
+        assert ei.value.failed_task_names == {'agh'}
 
 
 @pytest.mark.parametrize('is_empty_run', (False, True))

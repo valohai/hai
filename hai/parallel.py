@@ -8,6 +8,24 @@ class ParallelException(Exception):
     pass
 
 
+class TaskFailed(ParallelException):
+    def __init__(self, message, task, exception):
+        super().__init__(message)
+        self.task = task
+        self.task_name = task.name
+        self.exception = exception
+
+
+class TasksFailed(ParallelException):
+    def __init__(self, message, exception_map):
+        super().__init__(message)
+        self.exception_map = exception_map
+
+    @property
+    def failed_task_names(self):
+        return set(self.exception_map)
+
+
 class ParallelRun:
     """
     Encapsulates running several functions in parallel.
@@ -76,8 +94,7 @@ class ParallelRun:
                          instance itself.
         :type callback: function
 
-        :raises ParallelException: If any task crashes (only when
-                                   fail_fast is true).
+        :raises TaskFailed: If any task crashes (only when fail_fast is true).
         """
 
         # Keep track of tasks we've certifiably seen completed,
@@ -115,7 +132,7 @@ class ParallelRun:
                 # raising the exception directly.
                 if fail_fast and not task._success:
                     message = '[%s] %s' % (task.name, str(task._value))
-                    raise ParallelException(message) from task._value
+                    raise TaskFailed(message, task=task, exception=task._value) from task._value
 
             if callback:
                 callback(self)
@@ -131,14 +148,15 @@ class ParallelRun:
 
     def maybe_raise(self):
         """
-        Raise a `ParallelException` if any of the run tasks
+        Raise a `TasksFailed` if any of the run tasks
         ended up raising an exception.
         """
         exceptions = self.exceptions
         if exceptions:
-            exc = ParallelException('%d exceptions occurred' % len(exceptions))
-            exc.exceptions = exceptions
-            raise exc
+            raise TasksFailed(
+                '%d exceptions occurred' % len(exceptions),
+                exception_map=exceptions,
+            )
 
     @property
     def return_values(self):
@@ -152,7 +170,8 @@ class ParallelRun:
     def exceptions(self):
         """
         Get the exceptions (if any) of the tasks.
-        :return: dictionary of name to exception.
+
+        :return: dictionary of task name to exception.
         """
         return {
             t.name: t._value
