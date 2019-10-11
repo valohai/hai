@@ -40,7 +40,7 @@ class ParallelRun:
     def __init__(self, parallelism=None):
         self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
         self.tasks = []
-        self.completed_tasks = None
+        self.completed_tasks = WeakSet()
 
     def __enter__(self):
         return self
@@ -72,6 +72,12 @@ class ParallelRun:
         task = self.pool.apply_async(task, args=args, kwds=(kwargs or {}))
         task.name = str(name)
         self.tasks.append(task)
+
+        # Clear completed tasks, in case someone calls `add_task`
+        # while `.wait()` is in progress.  This will of course cause `.wait()`
+        # to have to do some extra work, but that's fine.
+        self.completed_tasks.clear()
+
         return task
 
     def wait(self, fail_fast=True, interval=0.5, callback=None):
@@ -100,8 +106,7 @@ class ParallelRun:
         # Keep track of tasks we've certifiably seen completed,
         # to avoid having to acquire a lock for the `ready` event
         # when we don't need to.
-
-        self.completed_tasks = WeakSet()
+        self.completed_tasks.clear()
 
         while True:
             # Keep track of whether there were any incomplete tasks this loop.
@@ -139,6 +144,11 @@ class ParallelRun:
 
             # If there were no incomplete tasks left last iteration, quit.
             if not had_any_incomplete_task:
+                break
+
+            # If the number of completed tasks equals the number of tasks to process,
+            # we're likewise done.
+            if len(self.completed_tasks) == len(self.tasks):
                 break
 
             # Otherwise wait for a bit before trying again.
