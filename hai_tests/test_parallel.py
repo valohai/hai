@@ -82,3 +82,15 @@ def test_parallel_limit(fail):
         else:
             parallel.wait(fail_fast=True)
             assert count == 0
+
+
+def test_parallel_long_interval_interruptible():
+    """
+    Test that even with long poll intervals, completion events interrupt the sleep
+    """
+    with ParallelRun() as parallel:
+        parallel.add_task(time.sleep, args=(.5,))  # will only wait for half a second
+        t0 = time.time()
+        parallel.wait(interval=10)  # would wait for 10
+        t1 = time.time()
+        assert t1 - t0 < 5
