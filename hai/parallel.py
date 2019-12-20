@@ -2,6 +2,7 @@ import os
 import threading
 from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
+from multiprocessing.dummy import Process as ProcessThread
 
 
 class ParallelException(Exception):
@@ -26,6 +27,29 @@ class TasksFailed(ParallelException):
         return set(self.exception_map)
 
 
+class NameableThreadPool(ThreadPool):
+
+    def Process(self, *args, **kwds):
+        self.process_counter += 1
+        if self.name:
+            kwds.setdefault('name', self._format_name(self.process_counter))
+        return ProcessThread(*args, **kwds)
+
+    def _format_name(self, suffix):
+        return '%s-%s' % (self.name, suffix)
+
+    def __init__(self, *, name=None, processes=None, initializer=None, initargs=()):
+        self.name = name
+        self.process_counter = 0
+        ThreadPool.__init__(self, processes, initializer, initargs)
+        if self.name:
+            # Unfortunately these won't affect e.g. PyCharm's concurrency diagram,
+            # but they may nevertheless be useful.
+            self._worker_handler.name = self._format_name('WorkerHandler')
+            self._task_handler.name = self._format_name('TaskHandler')
+            self._result_handler.name = self._format_name('ResultHandler')
+
+
 class ParallelRun:
     """
     Encapsulates running several functions in parallel.
@@ -37,8 +61,11 @@ class ParallelRun:
     gets properly shut down.
     """
 
-    def __init__(self, parallelism=None):
-        self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
+    def __init__(self, parallelism=None, name=None):
+        self.pool = NameableThreadPool(
+            name=name,
+            processes=(parallelism or (os.cpu_count() * 2)),
+        )
         self.task_complete_event = threading.Event()
         self.tasks = []
         self.completed_tasks = WeakSet()
