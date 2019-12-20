@@ -1,5 +1,5 @@
 import os
-import time
+import threading
 from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
 
@@ -39,6 +39,7 @@ class ParallelRun:
 
     def __init__(self, parallelism=None):
         self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
+        self.task_complete_event = threading.Event()
         self.tasks = []
         self.completed_tasks = WeakSet()
 
@@ -52,6 +53,9 @@ class ParallelRun:
         if self.pool:
             self.pool.terminate()
             self.pool = None
+
+    def _set_task_complete_event(self, value=None):
+        self.task_complete_event.set()
 
     def add_task(self, task, name=None, args=(), kwargs=None):
         """
@@ -69,7 +73,13 @@ class ParallelRun:
         """
         if not name:
             name = (getattr(task, '__name__' or None) or str(task))
-        task = self.pool.apply_async(task, args=args, kwds=(kwargs or {}))
+        task = self.pool.apply_async(
+            task,
+            args=args,
+            kwds=(kwargs or {}),
+            callback=self._set_task_complete_event,
+            error_callback=self._set_task_complete_event,
+        )
         task.name = str(name)
         self.tasks.append(task)
 
@@ -151,8 +161,10 @@ class ParallelRun:
             if len(self.completed_tasks) == len(self.tasks):
                 break
 
-            # Otherwise wait for a bit before trying again.
-            time.sleep(interval)
+            # Otherwise wait for a bit before trying again (unless a task completes)
+            self.task_complete_event.wait(interval)
+            # Reset the flag in case it had been set
+            self.task_complete_event.clear()
 
         return list(self.completed_tasks)  # We can just as well return the completed tasks.
 
