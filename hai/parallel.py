@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
 
@@ -90,9 +91,16 @@ class ParallelRun:
 
         return task
 
-    def wait(self, fail_fast=True, interval=0.5, callback=None):
+    def wait(
+        self,
+        fail_fast=True,
+        interval=0.5,
+        callback=None,
+        max_wait=None
+    ):
         """
-        Wait until all of the current tasks have finished.
+        Wait until all of the current tasks have finished,
+        or until `max_wait` seconds (if set) has been waited for.
 
         If `fail_fast` is True and any of them raises an exception,
         the exception is reraised within a ParallelException.
@@ -110,7 +118,11 @@ class ParallelRun:
                          instance itself.
         :type callback: function
 
+        :param max_wait: Maximum wait time, in seconds. Infinity if not set or zero.
+        :type max_wait: float
+
         :raises TaskFailed: If any task crashes (only when fail_fast is true).
+        :raises TimeoutError: If max_wait seconds have elapsed.
         """
 
         # Keep track of tasks we've certifiably seen completed,
@@ -118,7 +130,14 @@ class ParallelRun:
         # when we don't need to.
         self.completed_tasks.clear()
 
+        start_time = time.time()
+
         while True:
+            if max_wait:
+                waited_for = (time.time() - start_time)
+                if waited_for > max_wait:
+                    raise TimeoutError("Waited for {}/{} seconds.".format(waited_for, max_wait))
+
             # Keep track of whether there were any incomplete tasks this loop.
             had_any_incomplete_task = False
 
