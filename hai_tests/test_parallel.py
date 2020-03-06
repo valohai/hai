@@ -94,3 +94,10 @@ def test_parallel_long_interval_interruptible():
         parallel.wait(interval=10)  # would wait for 10
         t1 = time.time()
         assert t1 - t0 < 5
+
+
+def test_parallel_max_wait():
+    with ParallelRun() as parallel:
+        parallel.add_task(time.sleep, args=(1,))
+        with pytest.raises(TimeoutError):
+            parallel.wait(interval=.1, max_wait=.5)

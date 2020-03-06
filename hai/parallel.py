@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
 
@@ -90,9 +91,16 @@ class ParallelRun:
 
         return task
 
-    def wait(self, fail_fast=True, interval=0.5, callback=None):
+    def wait(
+        self,
+        fail_fast=True,
+        interval=0.5,
+        callback=None,
+        max_wait=None
+    ):
         """
-        Wait until all of the current tasks have finished.
+        Wait until all of the current tasks have finished,
+        or until `max_wait` seconds (if set) has been waited for.
 
         If `fail_fast` is True and any of them raises an exception,
         the exception is reraised within a ParallelException.
@@ -110,7 +118,11 @@ class ParallelRun:
                          instance itself.
         :type callback: function
 
+        :param max_wait: Maximum wait time, in seconds. Infinity if not set or zero.
+        :type max_wait: float
+
         :raises TaskFailed: If any task crashes (only when fail_fast is true).
+        :raises TimeoutError: If max_wait seconds have elapsed.
         """
 
         # Keep track of tasks we've certifiably seen completed,
@@ -118,36 +130,15 @@ class ParallelRun:
         # when we don't need to.
         self.completed_tasks.clear()
 
+        start_time = time.time()
+
         while True:
-            # Keep track of whether there were any incomplete tasks this loop.
-            had_any_incomplete_task = False
+            if max_wait:
+                waited_for = (time.time() - start_time)
+                if waited_for > max_wait:
+                    raise TimeoutError("Waited for {}/{} seconds.".format(waited_for, max_wait))
 
-            for task in self.tasks:  # :type: ApplyResult
-                # If we've already seen this task completed, don't bother.
-                if task in self.completed_tasks:
-                    continue
-
-                # Poll the task to see if it's ready.
-                is_ready = task.ready()
-
-                if not is_ready:
-                    # If it's not yet ready, we need to loop once more,
-                    # and we can't check for success now.
-                    had_any_incomplete_task = True
-                    continue
-
-                # Mark this task as completed (for good or for worse),
-                # so we don't need to re-check it.
-                self.completed_tasks.add(task)
-
-                # Raise an exception if we're failing fast.
-                # We're accessing `_success` directly instead of using
-                # `.successful()` to avoid re-locking (as `.ready()` would).
-                # Similarly, we access `._value` in order to avoid actually
-                # raising the exception directly.
-                if fail_fast and not task._success:
-                    message = '[%s] %s' % (task.name, str(task._value))
-                    raise TaskFailed(message, task=task, exception=task._value) from task._value
+            had_any_incomplete_task = self._wait_tick(fail_fast)
 
             if callback:
                 callback(self)
@@ -167,6 +158,37 @@ class ParallelRun:
             self.task_complete_event.clear()
 
         return list(self.completed_tasks)  # We can just as well return the completed tasks.
+
+    def _wait_tick(self, fail_fast):
+        # Keep track of whether there were any incomplete tasks this loop.
+        had_any_incomplete_task = False
+        for task in self.tasks:  # :type: ApplyResult
+            # If we've already seen this task completed, don't bother.
+            if task in self.completed_tasks:
+                continue
+
+            # Poll the task to see if it's ready.
+            is_ready = task.ready()
+
+            if not is_ready:
+                # If it's not yet ready, we need to loop once more,
+                # and we can't check for success now.
+                had_any_incomplete_task = True
+                continue
+
+            # Mark this task as completed (for good or for worse),
+            # so we don't need to re-check it.
+            self.completed_tasks.add(task)
+
+            # Raise an exception if we're failing fast.
+            # We're accessing `_success` directly instead of using
+            # `.successful()` to avoid re-locking (as `.ready()` would).
+            # Similarly, we access `._value` in order to avoid actually
+            # raising the exception directly.
+            if fail_fast and not task._success:
+                message = '[%s] %s' % (task.name, str(task._value))
+                raise TaskFailed(message, task=task, exception=task._value) from task._value
+        return had_any_incomplete_task
 
     def maybe_raise(self):
         """
