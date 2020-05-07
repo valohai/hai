@@ -1,3 +1,5 @@
+import io
+
 from hai.pipe_pump import CRLFPipePump
 
 
@@ -19,18 +21,23 @@ class CrlfTestHandler:
             self.raw_lines.append(new_content)
 
 
-def do_crlf_test(input):
+def do_crlf_test(input, chunk_size=64):
     handler = CrlfTestHandler()
     cpp = CRLFPipePump()
     cpp.add_handler(handler.handle_crlf_input)
     cpp.register('test', None)
-    cpp.feed('test', input)
+    input_io = io.BytesIO(input)
+    while True:
+        chunk = input_io.read(chunk_size)
+        if not chunk:
+            break
+        cpp.feed('test', chunk)
     cpp.close()
     return handler
 
 
 def test_crlf_pipe_pump():
-    input = b'''first\rreplaced first\nsecond\r\rreplaced second\n\r\r\rthird\n\n\nfourth'''
+    input = b'''first\rreplaced first\nsecond\r\rreplaced second\r\n\r\r\rthird\n\n\nfourth'''
     handler = do_crlf_test(input)
     assert handler.lines == [b'replaced first', b'replaced second', b'third', b'', b'', b'fourth']
     assert handler.raw_lines == [
