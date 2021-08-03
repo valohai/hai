@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v2
-      - run: 'pip install -e .[dev]'
+      - run: 'pip install -e . -r requirements-dev.in'
       - run: export BOTO_CONFIG=/dev/null
       - run: export AWS_SECRET_ACCESS_KEY=foobar_secret
       - run: export AWS_ACCESS_KEY_ID=foobar_key
@@ -36,5 +36,5 @@ jobs:
         with:
           python-version: 3.9
       - uses: actions/checkout@v2
-      - run: 'pip install -e .[dev]'
+      - run: 'pip install -e . -r requirements-lint.txt'
       - run: flake8 hai
