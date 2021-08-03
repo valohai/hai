@@ -1,0 +1,40 @@
+name: CI
+'on':
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  Test:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - '3.5'
+          - '3.6'
+          - '3.9'
+    steps:
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v2
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - uses: actions/checkout@v2
+      - run: 'pip install -e .[dev]'
+      - run: export BOTO_CONFIG=/dev/null
+      - run: export AWS_SECRET_ACCESS_KEY=foobar_secret
+      - run: export AWS_ACCESS_KEY_ID=foobar_key
+      - run: py.test -vvv --cov .
+      - run: 'bash <(curl -s https://codecov.io/bash)'
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - uses: actions/checkout@v2
+      - run: 'pip install -e .[dev]'
+      - run: flake8 hai
