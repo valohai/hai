@@ -19,9 +19,17 @@ isort==5.9.3
     # via flake8-isort
 mccabe==0.6.1
     # via flake8
+mypy==0.910
+    # via -r requirements-lint.in
+mypy-extensions==0.4.3
+    # via mypy
 pycodestyle==2.7.0
     # via flake8
 pyflakes==2.3.1
     # via flake8
 testfixtures==6.18.0
     # via flake8-isort
+toml==0.10.2
+    # via mypy
+typing-extensions==3.10.0.0
+    # via mypy

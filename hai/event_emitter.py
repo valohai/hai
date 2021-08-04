@@ -6,7 +6,7 @@ def _get_event_emitter_dict(obj):
 
 
 class EventEmitter:
-    event_types = set()
+    event_types = set()  # type: set[str]
 
     def on(self, event, handler):
         if event != '*' and event not in self.event_types:
