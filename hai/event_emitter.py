@@ -1,23 +1,27 @@
+from typing import Any, Callable, Dict, Optional
+
 DICT_NAME = '_event_emitter_dict'
 
+Handler = Callable[..., Any]
 
-def _get_event_emitter_dict(obj):
-    return obj.__dict__.setdefault(DICT_NAME, {})
+
+def _get_event_emitter_dict(obj: Any) -> Dict[str, Any]:
+    return obj.__dict__.setdefault(DICT_NAME, {})  # type: ignore[no-any-return]
 
 
 class EventEmitter:
     event_types = set()  # type: set[str]
 
-    def on(self, event, handler):
+    def on(self, event: str, handler: Handler) -> None:
         if event != '*' and event not in self.event_types:
             raise ValueError('event type {} is not known'.format(event))
 
         _get_event_emitter_dict(self).setdefault(event, set()).add(handler)
 
-    def off(self, event, handler):
+    def off(self, event: str, handler: Handler) -> None:
         _get_event_emitter_dict(self).get(event, set()).discard(handler)
 
-    def emit(self, event, args=None, quiet=True):
+    def emit(self, event: str, args: Optional[Dict[str, Any]] = None, quiet: bool = True) -> None:
         if event not in self.event_types:
             raise ValueError('event type {} is not known'.format(event))
         emitter_dict = _get_event_emitter_dict(self)

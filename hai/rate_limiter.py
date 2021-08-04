@@ -1,6 +1,6 @@
 import time
 from enum import Enum
-from typing import Optional, Union, Dict
+from typing import Dict, Optional, Union
 
 
 class StateChange(Enum):
@@ -87,17 +87,15 @@ class RateLimiter:
     def __init__(self, rate: Rate, allow_underflow: bool = False) -> None:
         """
         :param rate: The Rate for this RateLimiter.
-        :type rate: Rate
         :param allow_underflow: Whether to allow underflow for the limiter, i.e.
                                 whether subsequent ticks during throttling may cause
                                 the "token counter", as it were, to go negative.
-        :type allow_underflow: bool
         """
         self.rate = rate
         self.allow_underflow = bool(allow_underflow)
-        self.last_check: Optional[float] = None
-        self.allowance: Optional[float] = None
-        self.current_state: Optional[bool] = None
+        self.last_check = None  # type: Optional[float]
+        self.allowance = None  # type: Optional[float]
+        self.current_state = None  # type: Optional[bool]
 
     @classmethod
     def from_per_second(cls, per_second: int, allow_underflow: bool = False) -> "RateLimiter":
@@ -161,7 +159,7 @@ class MultiRateLimiter:
     rate_limiter_class = RateLimiter
     allow_underflow = False
 
-    def __init__(self, default_limit: Rate, per_name_limits: Dict[str, Rate] = None) -> None:
+    def __init__(self, default_limit: Rate, per_name_limits: Optional[Dict[str, Rate]] = None) -> None:
         self.limiters = {}  # type: Dict[str, RateLimiter]
         self.default_limit = default_limit
         self.per_name_limits = dict(per_name_limits or {})

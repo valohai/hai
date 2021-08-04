@@ -1,6 +1,8 @@
 import logging
 import os
-from typing import Optional, Iterable, IO
+from typing import IO, Any, Dict, Generator, Iterable, Optional
+
+from botocore.client import BaseClient
 
 from hai.event_emitter import EventEmitter
 
@@ -20,17 +22,21 @@ class MultipartUploader(EventEmitter):
     maximum_chunk_size = 150 * 1024 * 1024
     default_chunk_size = 50 * 1024 * 1024
 
-    def __init__(self, s3, log=None):
+    def __init__(self, s3: BaseClient, log: Optional[logging.Logger] = None) -> None:
         """
         :param s3: The boto3 S3 client to upload with
-        :type s3: botocore.client.BaseClient
         :param log: A logger, if desired.
-        :type log: logging.Logger
         """
         self.s3 = s3
         self.log = (log or logging.getLogger(self.__class__.__name__))
 
-    def upload_parts(self, bucket: str, key: str, parts: Iterable[bytes], create_params: Optional[dict] = None) -> dict:
+    def upload_parts(
+        self,
+        bucket: str,
+        key: str,
+        parts: Iterable[bytes],
+        create_params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Upload the given parts of binary data as a multipart upload.
 
@@ -93,7 +99,7 @@ class MultipartUploader(EventEmitter):
 
         self.log.info('Completing multipart upload')
 
-        return self.s3.complete_multipart_upload(
+        return self.s3.complete_multipart_upload(  # type: ignore[no-any-return]
             Bucket=bucket,
             Key=key,
             UploadId=mpu['UploadId'],
@@ -112,10 +118,10 @@ class MultipartUploader(EventEmitter):
         self,
         bucket: str,
         key: str,
-        fp: IO,
+        fp: IO[bytes],
         chunk_size: Optional[int] = None,
-        create_params: dict = None,
-    ) -> dict:
+        create_params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Upload the given file in chunks.
 
@@ -157,9 +163,9 @@ class MultipartUploader(EventEmitter):
                 max=S3_MAXIMUM_MULTIPART_CHUNK_SIZE,
             ))
 
-        def chunk_generator():
+        def chunk_generator() -> Generator[bytes, None, None]:
             while True:
-                chunk = self.read_chunk(fp, chunk_size)
+                chunk = self.read_chunk(fp, chunk_size)  # type: ignore[arg-type]
                 if not chunk:
                     break
                 yield chunk
