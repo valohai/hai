@@ -1,8 +1,8 @@
 import os
 import threading
 import time
-from weakref import WeakSet
 from multiprocessing.pool import ThreadPool
+from weakref import WeakSet
 
 
 class ParallelException(Exception):

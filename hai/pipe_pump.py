@@ -37,7 +37,7 @@ class BasePipePump:
         with self.selector_lock:
             if not self.selector:  # pragma: no cover
                 return
-            for (key, event) in self.selector.select(timeout=timeout):
+            for (key, _event) in self.selector.select(timeout=timeout):
                 data = key.fileobj.read(self.read_size)
                 self.feed(key.data, data)
 

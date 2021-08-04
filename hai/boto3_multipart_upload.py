@@ -1,5 +1,4 @@
 import logging
-
 import os
 
 from hai.event_emitter import EventEmitter
