@@ -24,11 +24,12 @@ jobs:
           python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v2
       - run: 'pip install -e . -r requirements-dev.in'
-      - run: export BOTO_CONFIG=/dev/null
-      - run: export AWS_SECRET_ACCESS_KEY=foobar_secret
-      - run: export AWS_ACCESS_KEY_ID=foobar_key
       - run: py.test -vvv --cov .
       - run: 'bash <(curl -s https://codecov.io/bash)'
+    env:
+      BOTO_CONFIG: /dev/null
+      AWS_SECRET_ACCESS_KEY: foobar_secret
+      AWS_ACCESS_KEY_ID: foobar_key
   Lint:
     runs-on: ubuntu-latest
     steps:
