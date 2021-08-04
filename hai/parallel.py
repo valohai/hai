@@ -1,8 +1,9 @@
 import os
 import threading
 import time
+from multiprocessing.pool import ApplyResult, ThreadPool
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from weakref import WeakSet
-from multiprocessing.pool import ThreadPool
 
 
 class ParallelException(Exception):
@@ -10,20 +11,20 @@ class ParallelException(Exception):
 
 
 class TaskFailed(ParallelException):
-    def __init__(self, message, task, exception):
+    def __init__(self, message: str, task: "ApplyResult[Any]", exception: Exception) -> None:
         super().__init__(message)
         self.task = task
-        self.task_name = task.name
+        self.task_name = str(getattr(task, "name", None))
         self.exception = exception
 
 
 class TasksFailed(ParallelException):
-    def __init__(self, message, exception_map):
+    def __init__(self, message: str, exception_map: Dict[str, Exception]) -> None:
         super().__init__(message)
         self.exception_map = exception_map
 
     @property
-    def failed_task_names(self):
+    def failed_task_names(self) -> Set[str]:
         return set(self.exception_map)
 
 
@@ -38,66 +39,68 @@ class ParallelRun:
     gets properly shut down.
     """
 
-    def __init__(self, parallelism=None):
-        self.pool = ThreadPool(processes=(parallelism or (os.cpu_count() * 2)))
+    def __init__(self, parallelism: Optional[int] = None) -> None:
+        self.pool = ThreadPool(processes=(parallelism or (int(os.cpu_count() or 1) * 2)))
         self.task_complete_event = threading.Event()
-        self.tasks = []
-        self.completed_tasks = WeakSet()
+        self.tasks = []  # type: List[ApplyResult[Any]]
+        self.completed_tasks = WeakSet()  # type: WeakSet[ApplyResult[Any]]
 
-    def __enter__(self):
+    def __enter__(self) -> "ParallelRun":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
         self.pool.terminate()
 
-    def __del__(self):  # opportunistic cleanup
+    def __del__(self) -> None:  # opportunistic cleanup
         if self.pool:
             self.pool.terminate()
-            self.pool = None
+            self.pool = None  # type: ignore[assignment]
 
-    def _set_task_complete_event(self, value=None):
+    def _set_task_complete_event(self, value: Any = None) -> None:
         self.task_complete_event.set()
 
-    def add_task(self, task, name=None, args=(), kwargs=None):
+    def add_task(
+        self,
+        task: Callable[..., None],
+        name: Optional[str] = None,
+        args: Tuple[Any, ...] = (),
+        kwargs: Optional[Dict[str, Any]] = None,
+    ) -> "ApplyResult[Any]":
         """
         Begin running a function (in a secondary thread).
 
         :param task: The function to run.
-        :type task: function
         :param name: A name for the task.
                      If none is specified, it's derived from the callable.
-        :type name: str|None
         :param args: Positional arguments, if any.
-        :type args: tuple|list|None
         :param kwargs: Keyword arguments, if any.
-        :type kwargs: dict|None
         """
         if not name:
-            name = (getattr(task, '__name__' or None) or str(task))
-        task = self.pool.apply_async(
+            name = (getattr(task, '__name__' or None) or str(task))  # type: ignore[arg-type]
+        p_task = self.pool.apply_async(
             task,
             args=args,
             kwds=(kwargs or {}),
             callback=self._set_task_complete_event,
             error_callback=self._set_task_complete_event,
         )
-        task.name = str(name)
-        self.tasks.append(task)
+        setattr(p_task, "name", str(name))  # noqa: B010
+        self.tasks.append(p_task)
 
         # Clear completed tasks, in case someone calls `add_task`
         # while `.wait()` is in progress.  This will of course cause `.wait()`
         # to have to do some extra work, but that's fine.
         self.completed_tasks.clear()
 
-        return task
+        return p_task
 
     def wait(
         self,
-        fail_fast=True,
-        interval=0.5,
-        callback=None,
-        max_wait=None
-    ):
+        fail_fast: bool = True,
+        interval: float = 0.5,
+        callback: Optional[Callable[["ParallelRun"], None]] = None,
+        max_wait: Optional[float] = None
+    ) -> List["ApplyResult[Any]"]:
         """
         Wait until all of the current tasks have finished,
         or until `max_wait` seconds (if set) has been waited for.
@@ -108,18 +111,14 @@ class ParallelRun:
 
         :param fail_fast: Whether to abort the `wait` as
                           soon as a task crashes.
-        :type fail_fast: bool
 
         :param interval: Loop sleep interval.
-        :type interval: float
 
         :param callback: A function that is called on each wait loop iteration.
                          Receives one parameter, the parallel run
                          instance itself.
-        :type callback: function
 
         :param max_wait: Maximum wait time, in seconds. Infinity if not set or zero.
-        :type max_wait: float
 
         :raises TaskFailed: If any task crashes (only when fail_fast is true).
         :raises TimeoutError: If max_wait seconds have elapsed.
@@ -159,7 +158,7 @@ class ParallelRun:
 
         return list(self.completed_tasks)  # We can just as well return the completed tasks.
 
-    def _wait_tick(self, fail_fast):
+    def _wait_tick(self, fail_fast: bool) -> bool:
         # Keep track of whether there were any incomplete tasks this loop.
         had_any_incomplete_task = False
         for task in self.tasks:  # :type: ApplyResult
@@ -185,12 +184,17 @@ class ParallelRun:
             # `.successful()` to avoid re-locking (as `.ready()` would).
             # Similarly, we access `._value` in order to avoid actually
             # raising the exception directly.
-            if fail_fast and not task._success:
-                message = '[%s] %s' % (task.name, str(task._value))
-                raise TaskFailed(message, task=task, exception=task._value) from task._value
+            if fail_fast and not task._success:  # type: ignore[attr-defined]
+                exc = task._value  # type: ignore[attr-defined]
+                message = '[%s] %s' % (task.name, str(exc))  # type: ignore[attr-defined]
+                raise TaskFailed(
+                    message,
+                    task=task,
+                    exception=exc,
+                ) from exc
         return had_any_incomplete_task
 
-    def maybe_raise(self):
+    def maybe_raise(self) -> None:
         """
         Raise a `TasksFailed` if any of the run tasks
         ended up raising an exception.
@@ -203,22 +207,22 @@ class ParallelRun:
             )
 
     @property
-    def return_values(self):
+    def return_values(self) -> Dict[str, Any]:
         """
         Get the return values (if resolved yet) of the tasks.
         :return: dictionary of name to return value.
         """
-        return {t.name: t._value for t in self.tasks if t.ready()}
+        return {t.name: t._value for t in self.tasks if t.ready()}  # type: ignore[attr-defined]
 
     @property
-    def exceptions(self):
+    def exceptions(self) -> Dict[str, Exception]:
         """
         Get the exceptions (if any) of the tasks.
 
         :return: dictionary of task name to exception.
         """
         return {
-            t.name: t._value
+            t.name: t._value  # type: ignore[attr-defined]
             for t in self.tasks
-            if t.ready() and not t._success
+            if t.ready() and not t._success  # type: ignore[attr-defined]
         }

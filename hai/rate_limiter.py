@@ -1,5 +1,6 @@
 import time
 from enum import Enum
+from typing import Dict, Optional, Union
 
 
 class StateChange(Enum):
@@ -21,7 +22,7 @@ STATE_CHANGE_MAP = {
 class Rate:
     __slots__ = ('rate', 'period', 'rate_per_period')
 
-    def __init__(self, rate, period=1):
+    def __init__(self, rate: int, period: Union[float, int] = 1) -> None:
         self.rate = float(rate)
         self.period = float(period)
         if self.rate < 0:
@@ -30,7 +31,7 @@ class Rate:
             raise ValueError('`period` must be > 0 (not %r)' % self.period)
         self.rate_per_period = (self.rate / self.period)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<Rate %f per %f>' % (self.rate, self.period)
 
 
@@ -49,18 +50,18 @@ class TickResult:
 
     __slots__ = ('state', 'did_change')
 
-    def __init__(self, state, did_change):
+    def __init__(self, state: bool, did_change: bool) -> None:
         self.state = bool(state)
         self.did_change = bool(did_change)
 
     @property
-    def state_change(self):
+    def state_change(self) -> StateChange:
         return STATE_CHANGE_MAP[(self.did_change, self.state)]
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<TickResult: %s (change: %s)>' % (
             ('throttled' if not self.state else 'open'),
             self.state_change,
@@ -83,36 +84,36 @@ class RateLimiter:
 
     __slots__ = ('rate', 'allow_underflow', 'last_check', 'allowance', 'current_state')
 
-    def __init__(self, rate, allow_underflow=False):
+    def __init__(self, rate: Rate, allow_underflow: bool = False) -> None:
         """
         :param rate: The Rate for this RateLimiter.
-        :type rate: Rate
         :param allow_underflow: Whether to allow underflow for the limiter, i.e.
                                 whether subsequent ticks during throttling may cause
                                 the "token counter", as it were, to go negative.
-        :type allow_underflow: bool
         """
         self.rate = rate
         self.allow_underflow = bool(allow_underflow)
-        self.last_check = None
-        self.allowance = None
-        self.current_state = None
+        self.last_check = None  # type: Optional[float]
+        self.allowance = None  # type: Optional[float]
+        self.current_state = None  # type: Optional[bool]
 
     @classmethod
-    def from_per_second(cls, per_second, allow_underflow=False):
+    def from_per_second(cls, per_second: int, allow_underflow: bool = False) -> "RateLimiter":
         return cls(rate=Rate(rate=per_second), allow_underflow=allow_underflow)
 
-    def _tick(self):
-        current = self.clock()
+    def _tick(self) -> bool:
+        # https://github.com/python/mypy/issues/6910
+        current = self.clock()  # type: float  # type: ignore[misc]
 
         if self.current_state is None:
             self.last_check = current
             self.allowance = self.rate.rate
             self.current_state = None
 
-        time_passed = current - self.last_check
+        last_check = self.last_check  # type: float # type: ignore[assignment]
+        time_passed = current - last_check
         self.last_check = current
-        self.allowance += time_passed * self.rate.rate_per_period
+        self.allowance += time_passed * self.rate.rate_per_period  # type: ignore[operator]
         self.allowance = min(self.allowance, self.rate.rate)  # Do not allow allowance to grow unbounded
         throttled = (self.allowance < 1)
         if self.allow_underflow or not throttled:
@@ -120,18 +121,17 @@ class RateLimiter:
 
         return (not throttled)
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the rate limiter to an open state.
         """
         self.current_state = self.allowance = self.last_check = None
 
-    def tick(self):
+    def tick(self) -> TickResult:
         """
         Tick the rate limiter, i.e. when a new event should be processed.
 
         :return: Returns a TickResult; see that class's documentation for information.
-        :rtype: TickResult
         """
         new_state = self._tick()
 
@@ -143,7 +143,7 @@ class RateLimiter:
 
         return TickResult(new_state, did_change)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<RateLimiter %s (allowance %s, rate %s)>' % (
             ('throttled' if not self.current_state else 'open'),
             self.allowance,
@@ -159,38 +159,35 @@ class MultiRateLimiter:
     rate_limiter_class = RateLimiter
     allow_underflow = False
 
-    def __init__(self, default_limit, per_name_limits=None):
-        self.limiters = {}
+    def __init__(self, default_limit: Rate, per_name_limits: Optional[Dict[str, Rate]] = None) -> None:
+        self.limiters = {}  # type: Dict[str, RateLimiter]
         self.default_limit = default_limit
         self.per_name_limits = dict(per_name_limits or {})
         assert isinstance(default_limit, Rate)
         assert all(isinstance(l, Rate) for l in self.per_name_limits.values())
 
-    def tick(self, name):
+    def tick(self, name: str) -> TickResult:
         """
         Tick a named RateLimiter.
 
         :param name: Name of the limiter.
         :return: TickResult for the limiter.
-        :rtype: TickResult
         """
         return self.get_limiter(name).tick()
 
-    def reset(self, name):
+    def reset(self, name: str) -> bool:
         """
         Reset (i.e. delete) a named RateLimiter.
         :param name: Name of the limiter.
         :return: True if the limiter was found and deleted.
-        :rtype: bool
         """
         return bool(self.limiters.pop(name, None))
 
-    def get_limiter(self, name):
+    def get_limiter(self, name: str) -> RateLimiter:
         """
         Get (or instantiate) a named RateLimiter.
 
         :param name: Name of the limiter.
-        :rtype: RateLimiter
         """
         limiter = self.limiters.get(name)
         if not limiter:
@@ -200,13 +197,12 @@ class MultiRateLimiter:
             )
         return limiter
 
-    def get_rate(self, name):
+    def get_rate(self, name: str) -> Rate:
         """
         Get the RateLimit for a named RateLimiter.
 
         This function is a prime candidate for overriding in a subclass.
 
         :param name: Name of the limiter.
-        :rtype: Rate
         """
         return self.per_name_limits.get(name, self.default_limit)

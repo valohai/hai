@@ -1,6 +1,8 @@
 import logging
-
 import os
+from typing import IO, Any, Dict, Generator, Iterable, Optional
+
+from botocore.client import BaseClient
 
 from hai.event_emitter import EventEmitter
 
@@ -20,34 +22,33 @@ class MultipartUploader(EventEmitter):
     maximum_chunk_size = 150 * 1024 * 1024
     default_chunk_size = 50 * 1024 * 1024
 
-    def __init__(self, s3, log=None):
+    def __init__(self, s3: BaseClient, log: Optional[logging.Logger] = None) -> None:
         """
         :param s3: The boto3 S3 client to upload with
-        :type s3: botocore.client.BaseClient
         :param log: A logger, if desired.
-        :type log: logging.Logger
         """
         self.s3 = s3
         self.log = (log or logging.getLogger(self.__class__.__name__))
 
-    def upload_parts(self, bucket, key, parts, create_params=None):
+    def upload_parts(
+        self,
+        bucket: str,
+        key: str,
+        parts: Iterable[bytes],
+        create_params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Upload the given parts of binary data as a multipart upload.
 
         :param bucket: Bucket to upload to.
-        :type bucket: str
         :param key: Key to upload to.
-        :type key: str
         :param parts: Iterable (may be a generator) of bytes to upload.
                       It is expected that these chunks all correspond to S3's standards, i.e.
                       are >= S3_MINIMUM_MULTIPART_CHUNK_SIZE (aside from the last part).
                       If they aren't, completing the upload will fail.
-        :type parts: Iterable[bytes]
         :param create_params: Any additional parameters to pass to `create_multipart_upload`.
                               These roughly correspond to what one might be able to pass to `put_object`.
-        :type create_params: dict[str, object]
         :return: The return value of `complete_multipart_upload`.
-        :rtype: dict
         """
         if create_params is None:
             create_params = {}
@@ -98,14 +99,14 @@ class MultipartUploader(EventEmitter):
 
         self.log.info('Completing multipart upload')
 
-        return self.s3.complete_multipart_upload(
+        return self.s3.complete_multipart_upload(  # type: ignore[no-any-return]
             Bucket=bucket,
             Key=key,
             UploadId=mpu['UploadId'],
             MultipartUpload={'Parts': part_infos},
         )
 
-    def read_chunk(self, fp, size):
+    def read_chunk(self, fp: IO[bytes], size: int) -> bytes:
         """
         Read a chunk of up to size `size` from the filelike object `fp`.
 
@@ -113,28 +114,30 @@ class MultipartUploader(EventEmitter):
         """
         return fp.read(size)
 
-    def upload_file(self, bucket, key, fp, chunk_size=None, create_params=None):
+    def upload_file(
+        self,
+        bucket: str,
+        key: str,
+        fp: IO[bytes],
+        chunk_size: Optional[int] = None,
+        create_params: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Upload the given file in chunks.
 
         :param bucket: Bucket to upload to.
-        :type bucket: str
         :param key: Key to upload to.
-        :type key: str
         :param fp: File-like object to upload.
-        :type fp: file
         :param chunk_size: Override automagically determined chunk size.
-        :type chunk_size: int
         :param create_params: Any additional parameters to pass to `create_multipart_upload`.
                               These roughly correspond to what one might be able to pass to `put_object`.
-        :type create_params: dict[str, object]
         :return: The return value of the `complete_multipart_upload` call.
         """
         if not hasattr(fp, 'read'):  # pragma: no cover
             raise TypeError('`fp` must have a `read()` method')
 
         try:
-            size = os.stat(fp.fileno()).st_size
+            size = os.stat(fp.fileno()).st_size  # type: Optional[int]
         except (OSError, AttributeError):
             size = None
 
@@ -160,16 +163,16 @@ class MultipartUploader(EventEmitter):
                 max=S3_MAXIMUM_MULTIPART_CHUNK_SIZE,
             ))
 
-        def chunk_generator():
+        def chunk_generator() -> Generator[bytes, None, None]:
             while True:
-                chunk = self.read_chunk(fp, chunk_size)
+                chunk = self.read_chunk(fp, chunk_size)  # type: ignore[arg-type]
                 if not chunk:
                     break
                 yield chunk
 
         return self.upload_parts(bucket, key, parts=chunk_generator(), create_params=create_params)
 
-    def determine_chunk_size_from_file_size(self, file_size):
+    def determine_chunk_size_from_file_size(self, file_size: Optional[int]) -> int:
         if file_size:
-            return file_size / 20
+            return int(file_size / 20)
         return self.default_chunk_size
