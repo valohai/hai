@@ -67,10 +67,7 @@ class MultipartUploader(EventEmitter):
                             Body=chunk,
                         )
                     except Exception as exc:
-                        self.log.error('Error uploading part {part_number} (attempt {attempt})'.format(
-                            part_number=part_number,
-                            attempt=attempt,
-                        ), exc_info=True)
+                        self.log.error(f'Error uploading part {part_number} (attempt {attempt})', exc_info=True)
                         self.emit('part-error', {
                             'chunk': part_number,
                             'attempt': attempt,
@@ -143,11 +140,8 @@ class MultipartUploader(EventEmitter):
 
         if size and size <= self.minimum_file_size:
             raise ValueError(
-                'File is too small to upload as multipart {size} bytes '
-                '(must be at least {minimum_size} bytes)'.format(
-                    size=size,
-                    minimum_size=self.minimum_file_size,
-                )
+                f'File is too small to upload as multipart {size} bytes '
+                f'(must be at least {self.minimum_file_size} bytes)'
             )
 
         if not chunk_size:
@@ -157,11 +151,10 @@ class MultipartUploader(EventEmitter):
             chunk_size = int(max(minimum, min(chunk_size, maximum)))
 
         if not S3_MINIMUM_MULTIPART_CHUNK_SIZE <= chunk_size < S3_MAXIMUM_MULTIPART_CHUNK_SIZE:
-            raise ValueError('Chunk size {size} is outside the protocol limits ({min}..{max})'.format(
-                size=chunk_size,
-                min=S3_MINIMUM_MULTIPART_CHUNK_SIZE,
-                max=S3_MAXIMUM_MULTIPART_CHUNK_SIZE,
-            ))
+            raise ValueError(
+                f'Chunk size {chunk_size} is outside the protocol limits '
+                f'({S3_MINIMUM_MULTIPART_CHUNK_SIZE}..{S3_MAXIMUM_MULTIPART_CHUNK_SIZE})'
+            )
 
         def chunk_generator() -> Generator[bytes, None, None]:
             while True:

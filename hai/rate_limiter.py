@@ -62,10 +62,8 @@ class TickResult:
         return self.state
 
     def __repr__(self) -> str:
-        return '<TickResult: {} (change: {})>'.format(
-            ('throttled' if not self.state else 'open'),
-            self.state_change,
-        )
+        state_text = ('throttled' if not self.state else 'open')
+        return f'<TickResult: {state_text} (change: {self.state_change})>'
 
 
 class RateLimiter:
@@ -144,11 +142,8 @@ class RateLimiter:
         return TickResult(new_state, did_change)
 
     def __repr__(self) -> str:
-        return '<RateLimiter {} (allowance {}, rate {})>'.format(
-            ('throttled' if not self.current_state else 'open'),
-            self.allowance,
-            self.rate,
-        )
+        state_text = ('throttled' if not self.current_state else 'open')
+        return f'<RateLimiter {state_text} (allowance {self.allowance}, rate {self.rate})>'
 
 
 class MultiRateLimiter:
