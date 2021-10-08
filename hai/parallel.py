@@ -135,7 +135,7 @@ class ParallelRun:
             if max_wait:
                 waited_for = (time.time() - start_time)
                 if waited_for > max_wait:
-                    raise TimeoutError("Waited for {}/{} seconds.".format(waited_for, max_wait))
+                    raise TimeoutError(f"Waited for {waited_for}/{max_wait} seconds.")
 
             had_any_incomplete_task = self._wait_tick(fail_fast)
 
@@ -186,7 +186,7 @@ class ParallelRun:
             # raising the exception directly.
             if fail_fast and not task._success:  # type: ignore[attr-defined]
                 exc = task._value  # type: ignore[attr-defined]
-                message = '[%s] %s' % (task.name, str(exc))  # type: ignore[attr-defined]
+                message = f'[{task.name}] {str(exc)}'  # type: ignore[attr-defined]
                 raise TaskFailed(
                     message,
                     task=task,

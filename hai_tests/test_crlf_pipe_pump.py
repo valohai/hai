@@ -10,11 +10,11 @@ class CrlfTestHandler:
     def handle_crlf_input(self, key, old_content, new_content, is_replace):
         if is_replace:
             if new_content:
-                self.log.append('Replace {} with {}'.format(old_content, new_content))
+                self.log.append(f'Replace {old_content} with {new_content}')
                 self.lines[-1] = new_content
                 self.raw_lines.append(new_content)
         else:
-            self.log.append('Print {}'.format(new_content))
+            self.log.append(f'Print {new_content}')
             self.lines.append(new_content)
             self.raw_lines.append(new_content)
 

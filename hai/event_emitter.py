@@ -14,7 +14,7 @@ class EventEmitter:
 
     def on(self, event: str, handler: Handler) -> None:
         if event != '*' and event not in self.event_types:
-            raise ValueError('event type {} is not known'.format(event))
+            raise ValueError(f'event type {event} is not known')
 
         _get_event_emitter_dict(self).setdefault(event, set()).add(handler)
 
@@ -23,7 +23,7 @@ class EventEmitter:
 
     def emit(self, event: str, args: Optional[Dict[str, Any]] = None, quiet: bool = True) -> None:
         if event not in self.event_types:
-            raise ValueError('event type {} is not known'.format(event))
+            raise ValueError(f'event type {event} is not known')
         emitter_dict = _get_event_emitter_dict(self)
         handlers = (
             emitter_dict.get(event, set()) | emitter_dict.get('*', set())

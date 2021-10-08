@@ -85,7 +85,7 @@ def test_error_handling():
     s3.create_bucket(Bucket='foo')
 
     def upload_fn(**args):
-        raise IOError('the internet is dead')
+        raise OSError('the internet is dead')
 
     s3.upload_part = upload_fn
     mpu = MultipartUploader(s3)
