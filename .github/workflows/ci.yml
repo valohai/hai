@@ -14,7 +14,6 @@ jobs:
         os:
           - ubuntu-latest
         python-version:
-          - '3.5'
           - '3.6'
           - '3.9'
     steps:
@@ -23,7 +22,7 @@ jobs:
         with:
           python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v2
-      - run: 'pip install -e . -r requirements-dev.in'
+      - run: 'pip install -e . -r requirements-test.txt'
       - run: py.test -vvv --cov .
       - run: 'bash <(curl -s https://codecov.io/bash)'
     env:

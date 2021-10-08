@@ -1,4 +1,0 @@
-# Unlike other projects, this is not pinned due to trying to also support Py3.5 too
-# and moto's deps aren't making that easy
-pytest-cov
-moto
