@@ -26,13 +26,13 @@ class Rate:
         self.rate = float(rate)
         self.period = float(period)
         if self.rate < 0:
-            raise ValueError('`rate` must be >= 0 (not %r)' % self.rate)
+            raise ValueError(f'`rate` must be >= 0 (not {self.rate!r})')
         if self.period <= 0:
-            raise ValueError('`period` must be > 0 (not %r)' % self.period)
+            raise ValueError(f'`period` must be > 0 (not {self.period!r})')
         self.rate_per_period = (self.rate / self.period)
 
     def __repr__(self) -> str:
-        return '<Rate %f per %f>' % (self.rate, self.period)
+        return f'<Rate {self.rate:f} per {self.period:f}>'
 
 
 class TickResult:
@@ -62,10 +62,8 @@ class TickResult:
         return self.state
 
     def __repr__(self) -> str:
-        return '<TickResult: %s (change: %s)>' % (
-            ('throttled' if not self.state else 'open'),
-            self.state_change,
-        )
+        state_text = ('throttled' if not self.state else 'open')
+        return f'<TickResult: {state_text} (change: {self.state_change})>'
 
 
 class RateLimiter:
@@ -144,11 +142,8 @@ class RateLimiter:
         return TickResult(new_state, did_change)
 
     def __repr__(self) -> str:
-        return '<RateLimiter %s (allowance %s, rate %s)>' % (
-            ('throttled' if not self.current_state else 'open'),
-            self.allowance,
-            self.rate,
-        )
+        state_text = ('throttled' if not self.current_state else 'open')
+        return f'<RateLimiter {state_text} (allowance {self.allowance}, rate {self.rate})>'
 
 
 class MultiRateLimiter:

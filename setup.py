@@ -20,9 +20,9 @@ if __name__ == '__main__':
         install_requires=[],
         packages=setuptools.find_packages('.', exclude=('hai_tests', 'hai_tests.*',)),
         include_package_data=True,
+        python_requires=">=3.6",
         classifiers=[
             "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
             "Programming Language :: Python :: 3.8",

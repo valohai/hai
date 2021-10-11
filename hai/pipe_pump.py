@@ -94,7 +94,7 @@ class BasePipePump:
             while self.selector is not None:
                 self.pump(timeout=interval)
 
-        return threading.Thread(target=pumper, name='Thread for %r' % self)
+        return threading.Thread(target=pumper, name=f'Thread for {self!r}')
 
 
 LineHandler = Callable[[str, List[bytes]], None]
@@ -110,7 +110,7 @@ class LinePipePump(BasePipePump):
         """
         :param separator: Line separator byte sequence.
         """
-        super(LinePipePump, self).__init__()
+        super().__init__()
         assert isinstance(separator, bytes)
         self.separator = separator
         self.lines = {}  # type: Dict[str, List[bytes]]
@@ -163,7 +163,7 @@ class LinePipePump(BasePipePump):
         # Flush all buffers when closing; any unfinished lines will thus
         # end up being posted as lines.
         self.pump()  # One more pump before closing!
-        super(LinePipePump, self).close()
+        super().close()
         for key, buffer in self.buffers.items():
             if buffer:  # pragma: no branch
                 self.add_line(key, buffer)
@@ -183,7 +183,7 @@ class ChunkPipePump(BasePipePump):
         :param chunk_size: Chunk size in bytes.
                            The final chunk might be shorter than this.
         """
-        super(ChunkPipePump, self).__init__()
+        super().__init__()
         assert chunk_size > 0
         self.chunk_size = chunk_size
         self._chunk_handlers = []  # type: List[ChunkHandler]
@@ -208,7 +208,7 @@ class ChunkPipePump(BasePipePump):
 
     def close(self) -> None:
         self.pump()  # One more pump before closing!
-        super(ChunkPipePump, self).close()
+        super().close()
         for key, buffer in self.buffers.items():
             if buffer:  # pragma: no branch
                 self._handle_chunk(key, buffer)

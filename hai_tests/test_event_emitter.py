@@ -41,7 +41,7 @@ def test_event_emitter_exceptions():
     t = Thing()
 
     def handle(**args):
-        raise IOError('oh no')
+        raise OSError('oh no')
 
     t.on('*', handle)
     t.emit('one')
