@@ -27,20 +27,32 @@ class BasePipePump:
         if fileobj:
             self.selector.register(fileobj, selectors.EVENT_READ, data=key)
 
-    def pump(self, timeout: float = 0) -> None:
+    def pump(self, timeout: float = 0, max_reads: int = 1) -> int:
         """
         Pump the pipes and buffer incoming data.
 
+        Returns the number of times reads occurred.
+
         :param timeout: Timeout for reading.
                         0 = just poll and return immediately.
+        :param max_reads: Maximum times to repeat reading until nothing is read anymore.
+        :return: The number of read attempts done.
         """
+        read_num = 0
         with self.selector_lock:
             if not self.selector:  # pragma: no cover
-                return
-            for (key, _event) in self.selector.select(timeout=timeout):
-                fileobj = key.fileobj  # type: IO[bytes]  # type: ignore[assignment]
-                data = fileobj.read(self.read_size)
-                self.feed(key.data, data)
+                return 0
+            while read_num < max_reads:
+                read_num += 1
+                should_repeat = False
+                for (key, _event) in self.selector.select(timeout=timeout):
+                    fileobj = key.fileobj  # type: IO[bytes]  # type: ignore[assignment]
+                    data = fileobj.read(self.read_size)
+                    self.feed(key.data, data)
+                    should_repeat = True  # Got data, should try again
+                if not should_repeat:
+                    break
+        return read_num
 
     def feed(self, key: str, data: bytes) -> None:
         """
