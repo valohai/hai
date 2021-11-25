@@ -2,7 +2,7 @@ import os
 import threading
 import time
 from multiprocessing.pool import ApplyResult, ThreadPool
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 from weakref import WeakSet
 
 
@@ -26,6 +26,9 @@ class TasksFailed(ParallelException):
     @property
     def failed_task_names(self) -> Set[str]:
         return set(self.exception_map)
+
+
+RT = TypeVar("RT")
 
 
 class ParallelRun:
@@ -61,11 +64,11 @@ class ParallelRun:
 
     def add_task(
         self,
-        task: Callable[..., None],
+        task: Callable[..., RT],
         name: Optional[str] = None,
         args: Tuple[Any, ...] = (),
         kwargs: Optional[Dict[str, Any]] = None,
-    ) -> "ApplyResult[Any]":
+    ) -> "ApplyResult[RT]":
         """
         Begin running a function (in a secondary thread).
 
