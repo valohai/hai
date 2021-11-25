@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock
 import time
+from unittest.mock import MagicMock
 
 import pytest
 
-from hai.parallel import ParallelException, ParallelRun, TasksFailed, TaskFailed
+from hai.parallel import ParallelException, ParallelRun, TaskFailed, TasksFailed
 
 
 def agh():

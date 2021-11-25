@@ -1,7 +1,7 @@
 import contextlib
 import subprocess
 
-from hai.pipe_pump import LinePipePump, ChunkPipePump
+from hai.pipe_pump import ChunkPipePump, LinePipePump
 
 
 def test_line_pipe_pump():

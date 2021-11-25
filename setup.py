@@ -1,6 +1,7 @@
 import ast
 import os
 import re
+
 import setuptools
 
 with open(os.path.join(os.path.dirname(__file__), 'hai', '__init__.py')) as infp:

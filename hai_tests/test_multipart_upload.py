@@ -2,8 +2,9 @@ from io import BytesIO
 
 import boto3
 import pytest
-from hai.boto3_multipart_upload import MultipartUploader, S3_MINIMUM_MULTIPART_FILE_SIZE
 from moto import mock_s3
+
+from hai.boto3_multipart_upload import S3_MINIMUM_MULTIPART_FILE_SIZE, MultipartUploader
 
 
 class ChunkCallbackMultipartUploader(MultipartUploader):
