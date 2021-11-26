@@ -39,3 +39,16 @@ jobs:
       - run: 'pip install -e . -r requirements-lint.txt'
       - run: flake8 hai
       - run: mypy hai
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - uses: actions/checkout@v2
+      - run: 'pip install build'
+      - run: python -m build .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist/
