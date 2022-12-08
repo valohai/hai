@@ -91,9 +91,9 @@ class RateLimiter:
         """
         self.rate = rate
         self.allow_underflow = bool(allow_underflow)
-        self.last_check = None  # type: Optional[float]
-        self.allowance = None  # type: Optional[float]
-        self.current_state = None  # type: Optional[bool]
+        self.last_check: Optional[float] = None
+        self.allowance: Optional[float] = None
+        self.current_state: Optional[bool] = None
 
     @classmethod
     def from_per_second(cls, per_second: int, allow_underflow: bool = False) -> "RateLimiter":
@@ -155,7 +155,7 @@ class MultiRateLimiter:
     allow_underflow = False
 
     def __init__(self, default_limit: Rate, per_name_limits: Optional[Dict[str, Rate]] = None) -> None:
-        self.limiters = {}  # type: Dict[str, RateLimiter]
+        self.limiters: Dict[str, RateLimiter] = {}
         self.default_limit = default_limit
         self.per_name_limits = dict(per_name_limits or {})
         assert isinstance(default_limit, Rate)

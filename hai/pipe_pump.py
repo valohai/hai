@@ -12,7 +12,7 @@ class BasePipePump:
 
     def __init__(self) -> None:
         self.selector = selectors.DefaultSelector()
-        self.buffers = {}  # type: Dict[str, bytes]
+        self.buffers: Dict[str, bytes] = {}
         self.selector_lock = threading.Lock()
 
     def register(self, key: str, fileobj: Optional[IO[bytes]]) -> None:
@@ -46,7 +46,7 @@ class BasePipePump:
                 read_num += 1
                 should_repeat = False
                 for (key, _event) in self.selector.select(timeout=timeout):
-                    fileobj = key.fileobj  # type: IO[bytes]  # type: ignore[assignment]
+                    fileobj: IO[bytes] = key.fileobj  # type: ignore[assignment]
                     data = fileobj.read(self.read_size)
                     self.feed(key.data, data)
                     should_repeat = True  # Got data, should try again
@@ -125,8 +125,8 @@ class LinePipePump(BasePipePump):
         super().__init__()
         assert isinstance(separator, bytes)
         self.separator = separator
-        self.lines = {}  # type: Dict[str, List[bytes]]
-        self._line_handlers = []  # type: List[LineHandler]
+        self.lines: Dict[str, List[bytes]] = {}
+        self._line_handlers: List[LineHandler] = []
 
     def add_line_handler(self, handler: LineHandler) -> None:
         """
@@ -241,8 +241,8 @@ class CRLFPipePump(BasePipePump):
 
     def __init__(self) -> None:
         super().__init__()
-        self.line_state = {}  # type: Dict[str, Tuple[Optional[bytes], bool]]
-        self._handlers = []  # type: List[CRLFHandler]
+        self.line_state: Dict[str, Tuple[Optional[bytes], bool]] = {}
+        self._handlers: List[CRLFHandler] = []
 
     def add_handler(self, handler: CRLFHandler) -> None:
         """
