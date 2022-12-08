@@ -45,8 +45,8 @@ class ParallelRun:
     def __init__(self, parallelism: Optional[int] = None) -> None:
         self.pool = ThreadPool(processes=(parallelism or (int(os.cpu_count() or 1) * 2)))
         self.task_complete_event = threading.Event()
-        self.tasks = []  # type: List[ApplyResult[Any]]
-        self.completed_tasks = WeakSet()  # type: WeakSet[ApplyResult[Any]]
+        self.tasks: List[ApplyResult[Any]] = []
+        self.completed_tasks: WeakSet[ApplyResult[Any]] = WeakSet()
 
     def __enter__(self) -> "ParallelRun":
         return self

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Set
 
 DICT_NAME = '_event_emitter_dict'
 
@@ -10,7 +10,7 @@ def _get_event_emitter_dict(obj: Any) -> Dict[str, Any]:
 
 
 class EventEmitter:
-    event_types = set()  # type: set[str]
+    event_types: Set[str] = set()
 
     def on(self, event: str, handler: Handler) -> None:
         if event != '*' and event not in self.event_types:

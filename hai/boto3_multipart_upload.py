@@ -134,7 +134,7 @@ class MultipartUploader(EventEmitter):
             raise TypeError('`fp` must have a `read()` method')
 
         try:
-            size = os.stat(fp.fileno()).st_size  # type: Optional[int]
+            size = os.stat(fp.fileno()).st_size
         except (OSError, AttributeError):
             size = None
 
