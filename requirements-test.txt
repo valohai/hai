@@ -23,8 +23,6 @@ coverage[toml]==6.5.0
     # via pytest-cov
 cryptography==38.0.4
     # via moto
-exceptiongroup==1.0.4
-    # via pytest
 idna==3.4
     # via requests
 iniconfig==1.1.1
@@ -70,10 +68,6 @@ six==1.16.0
     # via python-dateutil
 toml==0.10.2
     # via responses
-tomli==2.0.1
-    # via
-    #   coverage
-    #   pytest
 types-toml==0.10.8.1
     # via responses
 urllib3==1.26.13
@@ -81,7 +75,7 @@ urllib3==1.26.13
     #   botocore
     #   requests
     #   responses
-werkzeug==2.2.2
+werkzeug==2.2.3
     # via moto
 xmltodict==0.13.0
     # via moto
