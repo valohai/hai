@@ -1,12 +1,15 @@
 name: CI
-'on':
+
+on:
   push:
     branches:
       - master
   pull_request:
     branches:
       - master
+
 jobs:
+
   Test:
     runs-on: '${{ matrix.os }}'
     strategy:
@@ -22,13 +25,14 @@ jobs:
         with:
           python-version: '${{ matrix.python-version }}'
       - uses: actions/checkout@v2
-      - run: 'pip install -e . -r requirements-test.txt'
+      - run: pip install -e . -r requirements-test.txt
       - run: py.test -vvv --cov .
       - uses: codecov/codecov-action@v3
     env:
       BOTO_CONFIG: /dev/null
       AWS_SECRET_ACCESS_KEY: foobar_secret
       AWS_ACCESS_KEY_ID: foobar_key
+
   Lint:
     runs-on: ubuntu-latest
     steps:
@@ -36,9 +40,9 @@ jobs:
         with:
           python-version: '3.11'
       - uses: actions/checkout@v2
-      - run: 'pip install -e . -r requirements-lint.txt'
-      - run: flake8 hai
-      - run: mypy hai
+      - run: pip install -e . pre-commit
+      - run: pre-commit run --all-files
+
   Build:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +50,7 @@ jobs:
         with:
           python-version: '3.11'
       - uses: actions/checkout@v2
-      - run: 'pip install build'
+      - run: pip install build
       - run: python -m build .
       - uses: actions/upload-artifact@v2
         with:

@@ -4,3 +4,36 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+strict = true
+exclude = "hai_tests/test_.*"
+
+[[tool.mypy.overrides]]
+module = "boto3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "botocore.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "moto.*"
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+mccabe.max-complexity = 10
+select = [
+    "B", # bugbear
+    "C90", # mccabe
+    "E", # pycodestyle
+    "F", # pyflakes
+    "I", # isort
+    "T", # debugger and print
+    "W", # pycodestyle
+]
+ignore = [
+    "E741", # Ambiguous variable name
+]

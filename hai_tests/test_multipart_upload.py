@@ -19,7 +19,9 @@ class ChunkCallbackMultipartUploader(MultipartUploader):
 
 @mock_s3
 @pytest.mark.parametrize('file_type', ('real', 'imaginary'))
-@pytest.mark.parametrize('mpu_class', (MultipartUploader, ChunkCallbackMultipartUploader), ids=('no-func', 'chunk-func'))
+@pytest.mark.parametrize(
+    'mpu_class', (MultipartUploader, ChunkCallbackMultipartUploader), ids=('no-func', 'chunk-func')
+)
 def test_multipart_upload(tmpdir, file_type, mpu_class):
     if file_type == 'real':
         temp_path = tmpdir.join('temp.dat')
@@ -46,7 +48,6 @@ def test_multipart_upload(tmpdir, file_type, mpu_class):
         events.append(args)
 
     mpu.on('*', event_handler)
-
 
     if mpu_class is ChunkCallbackMultipartUploader:
         mpu.chunk_sizes = []
