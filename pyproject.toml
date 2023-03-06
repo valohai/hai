@@ -4,3 +4,19 @@ requires = [
     "wheel"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+strict = true
+exclude = "hai_tests/test_.*"
+
+[[tool.mypy.overrides]]
+module = "boto3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "botocore.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "moto.*"
+ignore_missing_imports = true
