@@ -4,11 +4,11 @@
 #
 #    pip-compile requirements-test.in
 #
-attrs==22.1.0
+attrs==22.2.0
     # via pytest
-boto3==1.26.25
+boto3==1.26.84
     # via moto
-botocore==1.29.25
+botocore==1.29.84
     # via
     #   boto3
     #   moto
@@ -17,17 +17,17 @@ certifi==2022.12.7
     # via requests
 cffi==1.15.1
     # via cryptography
-charset-normalizer==2.1.1
+charset-normalizer==3.1.0
     # via requests
-coverage[toml]==6.5.0
+coverage[toml]==7.2.1
     # via pytest-cov
-cryptography==38.0.4
+cryptography==39.0.2
     # via moto
-exceptiongroup==1.0.4
+exceptiongroup==1.1.0
     # via pytest
 idna==3.4
     # via requests
-iniconfig==1.1.1
+iniconfig==2.0.0
     # via pytest
 jinja2==3.1.2
     # via moto
@@ -35,20 +35,19 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-markupsafe==2.1.1
+markupsafe==2.1.2
     # via
     #   jinja2
-    #   moto
     #   werkzeug
-moto==4.0.11
+moto==4.1.4
     # via -r requirements-test.in
-packaging==22.0
+packaging==23.0
     # via pytest
 pluggy==1.0.0
     # via pytest
 pycparser==2.21
     # via cffi
-pytest==7.2.0
+pytest==7.2.2
     # via pytest-cov
 pytest-cov==4.0.0
     # via -r requirements-test.in
@@ -56,9 +55,7 @@ python-dateutil==2.8.2
     # via
     #   botocore
     #   moto
-pytz==2022.6
-    # via moto
-requests==2.28.1
+requests==2.28.2
     # via
     #   moto
     #   responses
@@ -74,14 +71,14 @@ tomli==2.0.1
     # via
     #   coverage
     #   pytest
-types-toml==0.10.8.1
+types-toml==0.10.8.5
     # via responses
-urllib3==1.26.13
+urllib3==1.26.14
     # via
     #   botocore
     #   requests
     #   responses
-werkzeug==2.2.2
+werkzeug==2.2.3
     # via moto
 xmltodict==0.13.0
     # via moto
