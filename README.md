@@ -16,7 +16,8 @@ python
 Installing editable library version in the current virtual environment.
 
 ```bash
-pip install -e .[dev]  # optionally replace . with the path to hai root
+# development dependencies require Python 3.8+
+pip install -e . -r requirements-lint.txt -r requirements-test.txt
 pytest
 
 python
