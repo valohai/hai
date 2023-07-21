@@ -17,7 +17,7 @@ Installing editable library version in the current virtual environment for devel
 
 ```bash
 # development dependencies require Python 3.8+
-pip install -e . -r requirements-test.txt pip-tools pre-commit && pre-commit install
+pip install -e . -r requirements-test.txt pre-commit && pre-commit install
 
 # if you want to manually run lints...
 pre-commit run --all-files
