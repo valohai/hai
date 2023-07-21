@@ -47,10 +47,12 @@ mccabe.max-complexity = 10
 select = [
     "B", # bugbear
     "C90", # mccabe
+    "COM", # trailing commas
     "E", # pycodestyle
     "F", # pyflakes
     "I", # isort
     "T", # debugger and print
+    "UP", # upgrade
     "W", # pycodestyle
 ]
 ignore = [
