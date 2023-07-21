@@ -20,21 +20,23 @@ def test_line_pipe_pump():
 
     with contextlib.closing(LinePipePump()) as pp:
         pp.add_line_handler(add_handler)
-        pp.register('stdout', proc.stdout)
+        pp.register("stdout", proc.stdout)
         pp.as_thread().start()
         proc.wait()
 
     assert line_lists == [
-        [b'hello'],
-        [b'olleh', b'world'],  # olleh due to mutation
+        [b"hello"],
+        [b"olleh", b"world"],  # olleh due to mutation
     ]
 
-    assert pp.get_value('stdout') == b'hello\ndlrow'  # and again re-reversed for the final list
+    assert (
+        pp.get_value("stdout") == b"hello\ndlrow"
+    )  # and again re-reversed for the final list
 
 
 def test_chunk_pipe_pump():
     proc = subprocess.Popen(
-        args='dd if=/dev/urandom bs=100 count=10',
+        args="dd if=/dev/urandom bs=100 count=10",
         stdout=subprocess.PIPE,
         shell=True,
         bufsize=0,
@@ -47,7 +49,7 @@ def test_chunk_pipe_pump():
 
     with contextlib.closing(ChunkPipePump()) as pp:
         pp.add_chunk_handler(add_handler)
-        pp.register('stdout', proc.stdout)
+        pp.register("stdout", proc.stdout)
         while proc.poll() is None:  # demonstrate hand-pumping
             pp.pump(0.05)
 

@@ -8,6 +8,7 @@ class BasePipePump:
     """
     Pump file objects into buffers.
     """
+
     read_size = 1024
 
     def __init__(self) -> None:
@@ -23,7 +24,7 @@ class BasePipePump:
         :param fileobj: File object to poll.
         """
         key = str(key)
-        self.buffers[key] = b''
+        self.buffers[key] = b""
         if fileobj:
             self.selector.register(fileobj, selectors.EVENT_READ, data=key)
 
@@ -45,7 +46,7 @@ class BasePipePump:
             while read_num < max_reads:
                 read_num += 1
                 should_repeat = False
-                for (key, _event) in self.selector.select(timeout=timeout):
+                for key, _event in self.selector.select(timeout=timeout):
                     fileobj: IO[bytes] = key.fileobj  # type: ignore[assignment]
                     data = fileobj.read(self.read_size)
                     self.feed(key.data, data)
@@ -106,7 +107,7 @@ class BasePipePump:
             while self.selector is not None:
                 self.pump(timeout=interval)
 
-        return threading.Thread(target=pumper, name=f'Thread for {self!r}')
+        return threading.Thread(target=pumper, name=f"Thread for {self!r}")
 
 
 LineHandler = Callable[[str, List[bytes]], None]
@@ -118,7 +119,7 @@ class LinePipePump(BasePipePump):
     separated by a given bytestring.
     """
 
-    def __init__(self, separator: bytes = b'\n') -> None:
+    def __init__(self, separator: bytes = b"\n") -> None:
         """
         :param separator: Line separator byte sequence.
         """
@@ -155,7 +156,7 @@ class LinePipePump(BasePipePump):
         """
         key = str(key)
         if not isinstance(line, bytes):
-            line = line.encode('utf-8')
+            line = line.encode("utf-8")
         line_list = self.lines.setdefault(key, [])
         line_list.append(line)
 
@@ -210,7 +211,7 @@ class ChunkPipePump(BasePipePump):
 
     def _process_buffer(self, key: str, buffer: bytes) -> bytes:
         while len(buffer) >= self.chunk_size:
-            chunk, buffer = buffer[:self.chunk_size], buffer[self.chunk_size:]
+            chunk, buffer = buffer[: self.chunk_size], buffer[self.chunk_size :]
             self._handle_chunk(key, chunk)
         return buffer
 
@@ -237,7 +238,7 @@ class CRLFPipePump(BasePipePump):
     Unlike LinePipePump, this does not buffer any history in its own state, only the last line.
     """
 
-    CRLF_SEP_RE = re.compile(br'^(.*?)([\r\n])')
+    CRLF_SEP_RE = re.compile(rb"^(.*?)([\r\n])")
 
     def __init__(self) -> None:
         super().__init__()
@@ -263,8 +264,8 @@ class CRLFPipePump(BasePipePump):
             m = self.CRLF_SEP_RE.match(buffer)
             if not m:
                 break
-            self._process_line(key, m.group(1), is_replace=(m.group(2) == b'\r'))
-            buffer = buffer[m.end():]
+            self._process_line(key, m.group(1), is_replace=(m.group(2) == b"\r"))
+            buffer = buffer[m.end() :]
         return buffer
 
     def _process_line(self, key: str, new_content: bytes, is_replace: bool) -> None:

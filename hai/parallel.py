@@ -11,7 +11,12 @@ class ParallelException(Exception):
 
 
 class TaskFailed(ParallelException):
-    def __init__(self, message: str, task: "ApplyResult[Any]", exception: Exception) -> None:
+    def __init__(
+        self,
+        message: str,
+        task: "ApplyResult[Any]",
+        exception: Exception,
+    ) -> None:
         super().__init__(message)
         self.task = task
         self.task_name = str(getattr(task, "name", None))
@@ -43,7 +48,9 @@ class ParallelRun:
     """
 
     def __init__(self, parallelism: Optional[int] = None) -> None:
-        self.pool = ThreadPool(processes=(parallelism or (int(os.cpu_count() or 1) * 2)))
+        self.pool = ThreadPool(
+            processes=(parallelism or (int(os.cpu_count() or 1) * 2)),
+        )
         self.task_complete_event = threading.Event()
         self.tasks: List[ApplyResult[Any]] = []
         self.completed_tasks: WeakSet[ApplyResult[Any]] = WeakSet()
@@ -79,7 +86,7 @@ class ParallelRun:
         :param kwargs: Keyword arguments, if any.
         """
         if not name:
-            name = (getattr(task, '__name__' or None) or str(task))  # type: ignore[arg-type]
+            name = getattr(task, "__name__" or None) or str(task)  # type: ignore[arg-type]
         p_task = self.pool.apply_async(
             task,
             args=args,
@@ -102,7 +109,7 @@ class ParallelRun:
         fail_fast: bool = True,
         interval: float = 0.5,
         callback: Optional[Callable[["ParallelRun"], None]] = None,
-        max_wait: Optional[float] = None
+        max_wait: Optional[float] = None,
     ) -> List["ApplyResult[Any]"]:
         """
         Wait until all of the current tasks have finished,
@@ -136,7 +143,7 @@ class ParallelRun:
 
         while True:
             if max_wait:
-                waited_for = (time.time() - start_time)
+                waited_for = time.time() - start_time
                 if waited_for > max_wait:
                     raise TimeoutError(f"Waited for {waited_for}/{max_wait} seconds.")
 
@@ -159,7 +166,9 @@ class ParallelRun:
             # Reset the flag in case it had been set
             self.task_complete_event.clear()
 
-        return list(self.completed_tasks)  # We can just as well return the completed tasks.
+        return list(
+            self.completed_tasks,
+        )  # We can just as well return the completed tasks.
 
     def _wait_tick(self, fail_fast: bool) -> bool:
         # Keep track of whether there were any incomplete tasks this loop.
@@ -189,7 +198,7 @@ class ParallelRun:
             # raising the exception directly.
             if fail_fast and not task._success:  # type: ignore[attr-defined]
                 exc = task._value  # type: ignore[attr-defined]
-                message = f'[{task.name}] {str(exc)}'  # type: ignore[attr-defined]
+                message = f"[{task.name}] {str(exc)}"  # type: ignore[attr-defined]
                 raise TaskFailed(
                     message,
                     task=task,
@@ -205,7 +214,7 @@ class ParallelRun:
         exceptions = self.exceptions
         if exceptions:
             raise TasksFailed(
-                '%d exceptions occurred' % len(exceptions),
+                f"{len(exceptions)} exceptions occurred",
                 exception_map=exceptions,
             )
 

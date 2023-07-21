@@ -25,13 +25,15 @@ def test_rate_limiter():
             assert not r.did_change
             assert r.state_change == StateChange.STILL_THROTTLED
 
-    time.sleep(.02)  # Wait for a very short time...
+    time.sleep(0.02)  # Wait for a very short time...
     assert not l.tick()  # Still throttled...
-    time.sleep(.2)  # Wait for enough to get 2 tokens.
+    time.sleep(0.2)  # Wait for enough to get 2 tokens.
 
     assert l.allowance < 1  # No tokens?
     r = l.tick()
-    assert 1 <= l.allowance <= 2  # We used one token in the tick, but one and some should be left
+    assert (
+        1 <= l.allowance <= 2
+    )  # We used one token in the tick, but one and some should be left
     assert r
     assert r.did_change
     assert r.state_change == StateChange.BECAME_OPEN
@@ -98,17 +100,17 @@ def test_rate_construction_validation():
 def test_multi_limiter():
     ml = MultiRateLimiter(default_limit=Rate(1, 0.1))
     # Tick two limiters:
-    assert ml.tick('foo')
-    assert ml.tick('bar')
-    assert not ml.tick('foo')
-    assert not ml.tick('bar')
+    assert ml.tick("foo")
+    assert ml.tick("bar")
+    assert not ml.tick("foo")
+    assert not ml.tick("bar")
     # Reset one of them and assert it is now open, yet the other is not
-    assert ml.reset('foo')  # Check that it got reset
-    assert ml.tick('foo')
-    assert not ml.tick('bar')
+    assert ml.reset("foo")  # Check that it got reset
+    assert ml.tick("foo")
+    assert not ml.tick("bar")
     # Wait for the other to open up again
     time.sleep(0.11)
-    assert ml.tick('bar')
+    assert ml.tick("bar")
 
 
 def test_smoke_reprs():

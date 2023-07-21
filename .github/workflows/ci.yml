@@ -21,10 +21,10 @@ jobs:
           - '3.11'
     steps:
       - name: 'Set up Python ${{ matrix.python-version }}'
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '${{ matrix.python-version }}'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: pip install -e . -r requirements-test.txt
       - run: py.test -vvv --cov .
       - uses: codecov/codecov-action@v3
@@ -36,23 +36,23 @@ jobs:
   Lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: pip install -e . pre-commit
       - run: pre-commit run --all-files
 
   Build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: pip install build
       - run: python -m build .
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist/
