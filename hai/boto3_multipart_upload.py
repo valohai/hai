@@ -158,7 +158,7 @@ class MultipartUploader(EventEmitter):
 
         def chunk_generator() -> Generator[bytes, None, None]:
             while True:
-                chunk = self.read_chunk(fp, chunk_size)  # type: ignore[arg-type]
+                chunk = self.read_chunk(fp, chunk_size)
                 if not chunk:
                     break
                 yield chunk
