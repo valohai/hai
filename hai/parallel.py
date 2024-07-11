@@ -36,35 +36,13 @@ class TasksFailed(ParallelException):
 RT = TypeVar("RT")
 
 
-class ParallelRun:
-    """
-    Encapsulates running several functions in parallel.
+class BaseParallelRun:
+    pool: ThreadPool
 
-    Due to the GIL, this is mainly useful for IO-bound threads, such as
-    downloading stuff from the Internet, or writing big buffers of data.
-
-    It's recommended to use this in a `with` block, to ensure the thread pool
-    gets properly shut down.
-    """
-
-    def __init__(self, parallelism: Optional[int] = None) -> None:
-        self.pool = ThreadPool(
-            processes=(parallelism or (int(os.cpu_count() or 1) * 2)),
-        )
+    def __init__(self) -> None:
         self.task_complete_event = threading.Event()
         self.tasks: List[ApplyResult[Any]] = []
         self.completed_tasks: WeakSet[ApplyResult[Any]] = WeakSet()
-
-    def __enter__(self) -> "ParallelRun":
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
-        self.pool.terminate()
-
-    def __del__(self) -> None:  # opportunistic cleanup
-        if self.pool:
-            self.pool.terminate()
-            self.pool = None  # type: ignore[assignment]
 
     def _set_task_complete_event(self, value: Any = None) -> None:
         self.task_complete_event.set()
@@ -108,7 +86,7 @@ class ParallelRun:
         self,
         fail_fast: bool = True,
         interval: float = 0.5,
-        callback: Optional[Callable[["ParallelRun"], None]] = None,
+        callback: Optional[Callable[["BaseParallelRun"], None]] = None,
         max_wait: Optional[float] = None,
     ) -> List["ApplyResult[Any]"]:
         """
@@ -238,3 +216,61 @@ class ParallelRun:
             for t in self.tasks
             if t.ready() and not t._success  # type: ignore[attr-defined]
         }
+
+
+class ChordParallelRun(BaseParallelRun):
+    """Parallel run that inherits the thread pool from another parallel run
+    instead of managing its own
+    """
+
+    def __init__(self, main_run: "ParallelRun") -> None:
+        super().__init__()
+        self.main_run = main_run
+        self.pool = main_run.pool
+
+    def ready(self) -> bool:
+        return all(t.ready() for t in self.tasks)
+
+
+class ParallelRun(BaseParallelRun):
+    """
+    Encapsulates running several functions in parallel.
+
+    Due to the GIL, this is mainly useful for IO-bound threads, such as
+    downloading stuff from the Internet, or writing big buffers of data.
+
+    It's recommended to use this in a `with` block, to ensure the thread pool
+    gets properly shut down.
+    """
+
+    def __init__(self, parallelism: Optional[int] = None) -> None:
+        super().__init__()
+        self.pool = ThreadPool(
+            processes=(parallelism or (int(os.cpu_count() or 1) * 2)),
+        )
+
+    def chord(self) -> ChordParallelRun:
+        """Return a ChordParallelRun that can run a separate set of tasks using
+        the same thread pool as this ParallelRun. This avoids creating nested thread pools
+        for tasks that can themselves utilize multiple threads.
+
+        Tasks added to chords are handled separately by the chord and are not also
+        added to this ParallelRun's tasks. ParallelRun.wait() will not wait for them
+        to complete. Instead, call the wait() method on each ChordParallelRun separately
+        to wait for that chord to complete.
+
+        Exiting this ParallelRun will terminate the thread pool even if there are
+        incomplete chords.
+        """
+        return ChordParallelRun(main_run=self)
+
+    def __enter__(self) -> "ParallelRun":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore[no-untyped-def]
+        self.pool.terminate()
+
+    def __del__(self) -> None:  # opportunistic cleanup
+        if self.pool:
+            self.pool.terminate()
+            self.pool = None  # type: ignore[assignment]
