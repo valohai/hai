@@ -15,6 +15,26 @@ def return_true():
     return True
 
 
+def run_chord(parallel: ParallelRun):
+    chord = parallel.chord()
+    chord.add_task(return_true, name="task_0")
+    chord.add_task(return_true, name="task_1")
+    chord.wait()
+    return chord.return_values
+
+
+def run_chord_with_error(parallel: ParallelRun):
+    chord = parallel.chord()
+    chord.add_task(return_true, name="task_0")
+    chord.add_task(agh, name="task_1")
+    try:
+        chord.wait()
+    except TaskFailed:
+        # Wait for the remaining tasks to complete
+        chord.wait(fail_fast=False)
+    return chord.return_values
+
+
 def test_parallel_crash():
     with ParallelRun() as parallel:
         parallel.add_task(return_true)
@@ -101,3 +121,38 @@ def test_parallel_max_wait():
         parallel.add_task(time.sleep, args=(1,))
         with pytest.raises(TimeoutError):
             parallel.wait(interval=0.1, max_wait=0.5)
+
+
+def test_parallel_chord_task():
+    with ParallelRun() as parallel:
+        for i in range(3):
+            parallel.add_task(
+                run_chord,
+                kwargs={"parallel": parallel},
+                name="chord_%d" % i,
+            )
+        parallel.wait()
+        assert parallel.return_values == {
+            "chord_0": {"task_0": True, "task_1": True},
+            "chord_1": {"task_0": True, "task_1": True},
+            "chord_2": {"task_0": True, "task_1": True},
+        }
+
+
+def test_parallel_chord_task_fail():
+    """
+    Test that failures inside a chord don't interrupt other chords or tasks
+    """
+    with ParallelRun() as parallel:
+        parallel.add_task(return_true)
+        parallel.add_task(run_chord, kwargs={"parallel": parallel}, name="chord_ok")
+        parallel.add_task(
+            run_chord_with_error,
+            kwargs={"parallel": parallel},
+            name="chord_fail",
+        )
+        parallel.wait()
+        assert parallel.return_values["return_true"]
+        assert parallel.return_values["chord_ok"] == {"task_0": True, "task_1": True}
+        assert parallel.return_values["chord_fail"]["task_0"]
+        assert isinstance(parallel.return_values["chord_fail"]["task_1"], RuntimeError)
