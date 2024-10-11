@@ -29,9 +29,7 @@ def test_line_pipe_pump():
         [b"olleh", b"world"],  # olleh due to mutation
     ]
 
-    assert (
-        pp.get_value("stdout") == b"hello\ndlrow"
-    )  # and again re-reversed for the final list
+    assert pp.get_value("stdout") == b"hello\ndlrow"  # and again re-reversed for the final list
 
 
 def test_chunk_pipe_pump():

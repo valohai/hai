@@ -161,11 +161,7 @@ class MultipartUploader(EventEmitter):
             maximum = min(S3_MAXIMUM_MULTIPART_CHUNK_SIZE, self.maximum_chunk_size)
             chunk_size = int(max(minimum, min(chunk_size, maximum)))
 
-        if (
-            not S3_MINIMUM_MULTIPART_CHUNK_SIZE
-            <= chunk_size
-            < S3_MAXIMUM_MULTIPART_CHUNK_SIZE
-        ):
+        if not S3_MINIMUM_MULTIPART_CHUNK_SIZE <= chunk_size < S3_MAXIMUM_MULTIPART_CHUNK_SIZE:
             raise ValueError(
                 f"Chunk size {chunk_size} is outside the protocol limits "
                 f"({S3_MINIMUM_MULTIPART_CHUNK_SIZE}..{S3_MAXIMUM_MULTIPART_CHUNK_SIZE})",

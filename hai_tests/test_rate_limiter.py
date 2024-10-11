@@ -31,9 +31,7 @@ def test_rate_limiter():
 
     assert l.allowance < 1  # No tokens?
     r = l.tick()
-    assert (
-        1 <= l.allowance <= 2
-    )  # We used one token in the tick, but one and some should be left
+    assert 1 <= l.allowance <= 2  # We used one token in the tick, but one and some should be left
     assert r
     assert r.did_change
     assert r.state_change == StateChange.BECAME_OPEN

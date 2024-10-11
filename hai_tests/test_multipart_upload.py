@@ -34,7 +34,7 @@ def test_multipart_upload(tmpdir, file_type, mpu_class):
         file = temp_path.open("rb")
     elif file_type == "imaginary":
         expected_size = S3_MINIMUM_MULTIPART_FILE_SIZE * 2
-        file = BytesIO(b"\xC0" * expected_size)
+        file = BytesIO(b"\xc0" * expected_size)
         file.seek(0)
     else:  # pragma: no cover
         raise NotImplementedError("...")
