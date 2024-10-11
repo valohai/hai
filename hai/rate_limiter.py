@@ -150,9 +150,7 @@ class RateLimiter:
 
     def __repr__(self) -> str:
         state_text = "throttled" if not self.current_state else "open"
-        return (
-            f"<RateLimiter {state_text} (allowance {self.allowance}, rate {self.rate})>"
-        )
+        return f"<RateLimiter {state_text} (allowance {self.allowance}, rate {self.rate})>"
 
 
 class MultiRateLimiter:
