@@ -34,6 +34,7 @@ class TasksFailed(ParallelException):
 
 
 RT = TypeVar("RT")
+ParallelRunType = TypeVar("ParallelRunType", bound="BaseParallelRun")
 
 
 class BaseParallelRun:
@@ -86,7 +87,7 @@ class BaseParallelRun:
         self,
         fail_fast: bool = True,
         interval: float = 0.5,
-        callback: Optional[Callable[["BaseParallelRun"], None]] = None,
+        callback: Optional[Callable[[ParallelRunType], None]] = None,
         max_wait: Optional[float] = None,
     ) -> List["ApplyResult[Any]"]:
         """
@@ -128,7 +129,7 @@ class BaseParallelRun:
             had_any_incomplete_task = self._wait_tick(fail_fast)
 
             if callback:
-                callback(self)
+                callback(self)  # type: ignore[arg-type]
 
             # If there were no incomplete tasks left last iteration, quit.
             if not had_any_incomplete_task:
